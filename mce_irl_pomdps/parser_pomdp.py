@@ -138,7 +138,7 @@ class POMDP(ABC):
 	@abstractmethod
 	def obs_state_distr(self):
 		""" Give the set of initial states and their probabilties
-			_obs_state_distr.get((obs_id,state_id), 0) return the 
+			_obs_state_distr[state_id][obs_id] IS the 
 			probability of perceiving observation obs_id at state_id.
 		"""
 		pass
@@ -242,7 +242,7 @@ class PrismModel(POMDP):
 		self._obs_state_distr = dict()
 		for state_id in self._states:
 			obs_id = pomdp.get_observation(state_id)
-			self._obs_state_distr[(obs_id,state_id)] = 1.0
+			self._obs_state_distr[state_id] = {obs_id : 1.0}
 
 		# Define the full list of state action and observation action
 		self._states_act = dict() # Save for each state the allowed actions
