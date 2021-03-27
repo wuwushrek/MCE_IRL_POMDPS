@@ -87,14 +87,14 @@ class IRLSolver:
 		mOpt.Params.BarConvTol = 1e-6
 		mOpt.Params.NonConvex = 2
 
-		# Build the objective function 
-		linExprCost = self.compute_expected_reward(nu_s_a, weight, feat_match=None)
+		# Build the objective function -> Negative expected reward
+		linExprCost = self.compute_expected_reward(nu_s_a, weight)
 		# Add to the cost the penalization from the cost of staisfying the spec
 		if self._pomdp.has_sideinfo:
-			linExprCost.add(slack_spec,-self._options.mu_spec)
+			linExprCost.add(slack_spec,self._options.mu_spec)
 
-		# Set the objective function
-		mOpt.setObjective(linExprCost, gp.GRB.MAXIMIZE)
+		# Set the objective function -> Negative sign to compensate
+		mOpt.setObjective(-linExprCost, gp.GRB.MAXIMIZE)
 
 		# Solve the problem
 		curr_time = time.time()
@@ -111,6 +111,24 @@ class IRLSolver:
 				print('[Slack value spec = {}]'.format(slack_spec.x))
 				print('[Number of steps : {}]'.format(sum( nu_s_val.x for s, nu_s_val in nu_s_spec.items())))
 			print('[Optimal policy : {}]'.format({ o : {p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
+
+	def compute_policy_via_scp(self, weight):
+		""" Given the current weight for each feature functions in the POMDP model,
+			and the feature expected reward, compute the optimal policy 
+			that maximizes the max causal entropy
+			:param weight : the coefficient associated to each feature function
+		"""
+		# Create the optimization problem
+		mOpt = gp.Model('Optimal Policy with Sequential convex programming Gurobi Solver')
+		self.total_solve_time = 0       # Total time elapsed
+		self.init_encoding_time = 0     # Time for encoding the full problem
+		self.update_constraint_time = 0
+
+		nu_s, nu_s_spec, nu_s_a, nu_s_a_spec, sigma, slack_spec,\
+			slack_nu_p, slack_nu_n, slack_nu_p_spec, slack_nu_n_spec,\
+				constrLin, constrLinSpec, constrTrustReg,\
+					nu_s_ver, nu_s_ver_spec, bellConstr, bellConstrDict= \
+			self.init_optimization_problem(mOpt, noLinearization=False)
 
 
 
@@ -201,16 +219,17 @@ class IRLSolver:
 		dummy_pol = { s : { a : 1.0/len(actList) for a in actList} for s, actList in self._pomdp.obs_act.items()}
 
 		# Add the bellman constraint knowing the policy
-		self.constr_bellman_flow(checkOpt, nu_s_ver, nu_s_a=None, sigma=dummy_pol, gamma=self._options.discount,name='bellman')
+		bellConstr = self.constr_bellman_flow(checkOpt, nu_s_ver, nu_s_a=None, sigma=dummy_pol, gamma=self._options.discount,name='bellman')
+		bellConstrDict = dict()
 		if self._pomdp.has_sideinfo:
-			self.constr_bellman_flow(checkOpt, nu_s_ver_spec, nu_s_a=None, sigma=dummy_pol, gamma=1.0,name='bellman_spec')
+			bellConstrDict = self.constr_bellman_flow(checkOpt, nu_s_ver_spec, nu_s_a=None, sigma=dummy_pol, gamma=1.0,name='bellman_spec')
 
 		# Save the encoding compute time the of the problem
 		self.init_encoding_time += time.time() - curr_time
 		return 	nu_s, nu_s_spec, nu_s_a, nu_s_a_spec, sigma, slack_spec, \
 				slack_nu_p, slack_nu_n, slack_nu_p_spec, slack_nu_n_spec,\
 				constrLin, constrLinSpec, constrTrustReg,\
-				nu_s_ver, nu_s_ver_spec
+				nu_s_ver, nu_s_ver_spec, bellConstr, bellConstrDict
 
 		# # Define the parameters used by Gurobi for this problem
 		# self._lin_encoding.Params.OutputFlag = self._options.verbose
@@ -224,6 +243,11 @@ class IRLSolver:
 		# self._lin_encoding.Params.FeasibilityTol = 1e-6
 		# self._lin_encoding.Params.OptimalityTol = 1e-6
 		# self._lin_encoding.Params.BarConvTol = 1e-6
+
+	def nacc(self, s):
+		""" Return True if the given state s is not in prob1A and prob0E
+		"""
+		return s not in self._pomdp.prob1A and s not in self._pomdp.prob0E
 
 	def constr_state_action_to_state_visition(self, mOpt, nu_s, nu_s_a, name='vis_count'):
 		""" Encode the constraint between nu_s and nu_s_a
@@ -250,27 +274,23 @@ class IRLSolver:
 		"""
 		assert (nu_s_a is None and sigma is not None) or (nu_s_a is not None and sigma is None)
 		
-		# Quick util function to check if non accepting state
-		nacc = lambda s : (s not in self._pomdp.prob1A and s not in self._pomdp.prob0E)
-		
 		dictConstr = dict()
 		for s, nu_s_v in nu_s.items():
 			# Probabilities of perceiving an obs from state s
 			obs_distr = self._pomdp.obs_state_distr[s]
 			if sigma is not None: # If the policy is given
+				dicCoeff = self.extract_varcoeff_from_bellman(s, sigma, gamma)
 				val_expr = gp.LinExpr([
-								*((sigma[o][a]*p*gamma*(tProb if nacc(pred_s) else 0), nu_s[pred_s])\
-									for (pred_s, a, tProb) in self._pomdp.pred.get(s,[])  \
-										for o,p in self._pomdp.obs_state_distr[pred_s].items()
-								 ), (-1,nu_s_v)]
-							)
+								*((sum(coeffV), nu_s[pred_s]) for pred_s, coeffV in dicCoeff.items()),
+								 (-1,nu_s_v)
+								 ])
 			else: # if the state-action visitation count is given
-				val_expr = gp.LinExpr([*( ( gamma*(tProb if nacc(pred_s) else 0), nu_s_a[pred_s][a] ) \
+				val_expr = gp.LinExpr([*( ( gamma*(tProb if self.nacc(pred_s) else 0), nu_s_a[pred_s][a] ) \
 											for (pred_s, a, tProb) in self._pomdp.pred.get(s,[]) 
 										), 
 										(-1, nu_s_v)
 									   ])
-			# Add the linear constraint
+			# Add the linear constraint -> RHS corresponds to the probability the state is an initial state
 			dictConstr[s] = mOpt.addLConstr(val_expr, gp.GRB.EQUAL, 
 									-self._pomdp.state_init_prob.get(s,0), name="{}[{}]".format(name,s))
 		return dictConstr
@@ -330,27 +350,28 @@ class IRLSolver:
 										name='trust_sup[{},{}]'.format(o,a))
 		return dictConstr
 
-	def compute_expected_reward(self, nu_s_a, theta, feat_match=None):
+	def compute_expected_reward(self, nu_s_a, theta):
 		""" Provide a linear expression for the expected reward
 			given a weight theta and the feature matching
+			theta^T(feat_match- expected reward)
 			:param nu_s_a : the state-action visitation count
 			:param theta : the weight for the feature function
 			:param featmatch : the expected feature matching
 		"""
 		val_expr = gp.LinExpr(
-					[( rew[(o,a)]*p*theta[rName], nu_s_a_val )\
+					[( -rew[(o,a)]*p*theta[rName], nu_s_a_val )\
 						for rName, rew in self._pomdp.reward_features.items() \
 							for s, nu_s_a_t in nu_s_a.items() \
 								for a, nu_s_a_val in nu_s_a_t.items()
 									for o, p in self._pomdp.obs_state_distr[s].items()
 					]
 					)
-		if feat_match is not None:
-			val_expr.addConstant(
-				-sum(theta_val*feat_val \
-						for r_name, theta_val in theta.items() \
-							for (o,a), feat_val in feat_match[r_name].items())
-			)
+		# if feat_match is not None:
+		# 	val_expr.addConstant(
+		# 		sum(theta_val*feat_val \
+		# 				for r_name, theta_val in theta.items() \
+		# 					for (o,a), feat_val in feat_match[r_name].items())
+		# 	)
 		return val_expr
 
 	def update_constr_and_trust_region(self, mOpt, constrLin, constrTrust, nu_s_past, sigma_past, nu_s, sigma, currTrust):
@@ -367,6 +388,7 @@ class IRLSolver:
 		"""
 		# Start by updating the constraint by the trust region
 		for (o, a, tRhs), constrV in constrLin.items():
+			# tRhs is True correspons to lower bound of the trust region and inversely
 			constrV.RHS = sigma_past[o][a] * (1.0/currTrust if tRhs else currTrust)
 
 		# Now update the constraints from the linearization
@@ -380,14 +402,14 @@ class IRLSolver:
 			# Update the coefficient associated to nu_s[s]
 			mOpt.chgCoeff(constrV, nu_s[s], prod_obs_prob_sigma_past)
 		# Model update
-		mOpt.update()
+		# mOpt.update()
 
 	def compute_entropy_cost(self, matchReward, nu_s_past, nu_s_a_past, nu_s, nu_s_a, slack_nu_p, slack_nu_n,
 								slack_nu_p_spec=dict(), slack_nu_n_spec=dict(), slack_spec=None):
 		""" Return a linearized entropy function around the solution of the past
 			iteration given by nu_s_oast and nu_s_a_past.
 			If matchReward is not None, the linearized function is added to  
-			matchReward = theta^T(expected feature reward - demonstration feature)
+			matchReward = -theta^T(expected feature reward)
 			:param matchReward : A linear expression of the reward expression
 			:param nu_s_past : state visitation at the past iteration
 			:param nu_s_a_past : state action visitation at the past iteration
@@ -425,29 +447,81 @@ class IRLSolver:
 		matchReward.addTerms(coeffT, varT)
 		return matchReward
 
+	def extract_varcoeff_from_bellman(self, state, policy_val, gamma=1.0):
+		""" Utility function that provides given a policy, the coefficien of each
+			variable nu_s[pred(state)] (in the linear expression) for all predecessor of state
+			:param state : the current state of the pomdp
+			:param policy_val : the underlying policy
+		"""
+		dictPredCoeff = dict() # Variable to store the coefficient associated to nu_s[pred(state)]
+		# Get the from the past optimal value, the coefficient for each variable in the bellman constraint
+		for (pred_s,a,tProb) in self._pomdp.pred.get(state, []):
+			if pred_s not in dictPredCoeff:
+				dictPredCoeff[pred_s] = list()
+			for o,p in self._pomdp.obs_state_distr[pred_s].items():
+				dictPredCoeff[pred_s].append(policy_val[o][a]*p*gamma*(tProb if self.nacc(pred_s) else 0))
+		return dictPredCoeff
 
-	# def verify_solution(self, mOpt, nu_s, policy_val, constrBellman, 
-	# 						nu_s_spec=dict(), constrBellmanSpec=dict()):
-	# 	""" Given a policy that is solution of the past iteration,
-	# 		this function computes the corresponding state and state-action
-	# 		visitation count that satisfy the bellman equation flow.
-	# 		Then, it computes the objective attained by this policy.
-	# 		:param mOpt : The gurobi model encoding the solution of the bellman flow equation
-	# 		:param nu_s : state visitation count of mOpt problem
-	# 		:param policy_val : The optimal policy obtaine durint this iteration
-	# 		:param constrBellman : constraint representing the bellman equation
-	# 	"""
-	# 	# Quick util function to check if non accepting state
-	# 	nacc = lambda s : (s not in self._pomdp.prob1A and s not in self._pomdp.prob0E)
+	def verify_solution(self, mOpt, nu_s, policy_val, constrBellman, 
+							nu_s_spec=dict(), constrBellmanSpec=dict()):
+		""" Given a policy that is solution of the past iteration,
+			this function computes the corresponding state and state-action
+			visitation count that satisfy the bellman equation flow.
+			Then, it computes the objective attained by this policy.
+			:param mOpt : The gurobi model encoding the solution of the bellman flow
+			:param nu_s : state visitation count of mOpt problem
+			:param policy_val : The optimal policy obtaine durint this iteration
+			:param constrBellman : constraint representing the bellman equation
+		"""
+		curr_time = time.time()
 
-	# 	# Update the optimization problem with the given policy
-	# 	for s, constrV in constrBellman.items():
-	# 		# Probabilities of perceiving an obs from state s
-	# 		obs_distr = self._pomdp.obs_state_distr[s]
-	# 		coeffV = sum( sum(policy_val[o][a]*p for o,p in obs_distr.items()) *\
-	# 				  			self._options.discount*(tProb if nacc(pred_s) else 0) \
-	# 								for (pred_s,a,tProb) in self._pomdp.pred[s])
-	# 		mOpt.chgCoeff(constrV, nu_s[s], )
+		# Update the optimization problem with the given policy
+		for s, nu_s_val in nu_s.items():
+			dicCoeff = self.extract_varcoeff_from_bellman(s, policy_val, gamma=self._options.discount)	
+			for pred_s, coeffV in dicCoeff.items():
+				sum_coeff = sum(coeffV)
+				sum_coeff_undis = sum_coeff/self._options.discount
+				mOpt.chgCoeff(constrBellman[s], nu_s[pred_s], sum_coeff- (1 if pred_s == s else 0))
+				if self._pomdp.has_sideinfo: # Do a scale back to gamma = 1
+					mOpt.chgCoeff(constrBellmanSpec[s], nu_s_spec[pred_s], \
+									sum_coeff_undis - (1 if pred_s == s else 0))
+
+		# Now solve the problem to get the corresponding state, state-action visitation count
+		mOpt.setObjective(0, GRB.MINIMIZE)
+		mOpt.optimize()
+
+		# Save the resulting state and state_action value
+		res_nu_s = { s : val.x for s, val in nu_s.items()}
+		res_nu_s_a = {s : {a : res_nu_s[s]*sum( p*policy_val[o][a] for o, p in self._pomdp.obs_state_distr[s].items())\
+							for a in actList }\
+						for s, actList in self._pomdp.states_act.items()
+					}
+		# Save the resulting state and state_action value for specifications
+		res_nu_s_spec = dict()
+		res_nu_s_a_spec = dict()
+		if self._pomdp.has_sideinfo:
+			res_nu_s_spec = { s : val.x for s, val in nu_s_spec.items()}
+			res_nu_s_a_spec = {s : {a : res_nu_s_spec[s]*sum( p*policy_val[o][a] for o, p in self._pomdp.obs_state_distr[s].items())\
+									for a in actList }\
+								for s, actList in self._pomdp.states_act.items()
+								}
+
+		# Get the incurred cost
+		spec_cost = sum( res_nu_s_spec[s] for s in self._pomdp.prob1A)
+
+		# Get the entropy cost
+		ent_cost = sum( 0 if res_nu_s[s]<=0 else (-np.log(res_nu_s_a[s][a]/res_nu_s[s])*res_nu_s_a[s][a])\
+							for s, actList in self._pomdp.states_act.items()\
+								for a in actList
+						)
+		computeTime = time.time()-curr_time
+		self.checking_policy_time += computeTime
+		if self._options.verbose:
+			print("[CHECK]: Finding the state and state-action visitation count given a policy")
+			print("[CHECK]: Current policy: {}".format(policy_val))
+			print("[CHECK]: Entropy cost {}, Spec SAT : {}, Checking time: {}".format(ent_cost, spec_cost,computeTime))
+		return ent_cost, spec_cost, res_nu_s, res_nu_s_a, res_nu_s_spec, res_nu_s_a_spec
+
 
 
 if __name__ == "__main__":
