@@ -64,7 +64,7 @@ class IRLSolver:
 		# self._lin_encoding = gp.Model('Linearized problem')
 		# self.init_linearized_problem(pomdp, options, init_trust_region, sat_thresh)
 
-	def compute_optimal_policy_nonconvex_grb(self, weight):
+	def from_reward_to_optimal_policy_nonconvex_grb(self, weight):
 		""" Given the weight for each feature functions in the POMDP model,
 			compute the optimal policy that maximizes the expected reward
 			while satisfying
@@ -107,7 +107,7 @@ class IRLSolver:
 			print('[Total solving time : {}]'.format(self.total_solve_time))
 			print('[Optimal expected reward : {}]'.format(mOpt.objVal))
 			if self._pomdp.has_sideinfo:
-				print('[Satisfaction of the formula = {}'.format( sum(nu_s_spec[s].x for s in self._pomdp.prob1A) ))
+				print('[Satisfaction of the formula = {}]'.format( sum(nu_s_spec[s].x for s in self._pomdp.prob1A) ))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
 				print('[Number of steps : {}]'.format(sum( nu_s_val.x for s, nu_s_val in nu_s_spec.items())))
 			print('[Optimal policy : {}]'.format({ o : {p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
@@ -337,9 +337,8 @@ class IRLSolver:
 			:param theta : the weight for the feature function
 			:param featmatch : the expected feature matching
 		"""
-		print(self._pomdp.reward_features)
 		val_expr = gp.LinExpr(
-					[( rew[(o,a)]*p*theta[rName][(o,a)] , nu_s_a_val )\
+					[( rew[(o,a)]*p*theta[rName], nu_s_a_val )\
 						for rName, rew in self._pomdp.reward_features.items() \
 							for s, nu_s_a_t in nu_s_a.items() \
 								for a, nu_s_a_val in nu_s_a_t.items()
@@ -348,9 +347,9 @@ class IRLSolver:
 					)
 		if feat_match is not None:
 			val_expr.addConstant(
-				-sum(theta_val*feat_match[r_name][(o,a)] \
-						for r_name, theta_state_act in theta.items() \
-							for (o,a), theta_val in theta_state_act.items())
+				-sum(theta_val*feat_val \
+						for r_name, theta_val in theta.items() \
+							for (o,a), feat_val in feat_match[r_name].items())
 			)
 		return val_expr
 
@@ -454,19 +453,26 @@ class IRLSolver:
 if __name__ == "__main__":
 	# Customize maze with loop removed for the poison state
 	pModel = PrismModel("parametric_maze_stochastic.pm", ["P=? [F \"target\"]"])
-	print(pModel.obs_state_distr)
+	# print(pModel.obs_state_distr)
 	mOptions = OptOptions()
+
+	# Build an instance of the IRL problem
 	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=4, options=mOptions)
+
+	# Check if the generated Gurobi problem looks correct
 	mOpt = gp.Model('test')
 	checkOpt = gp.Model()
 	res = irlPb.init_optimization_problem(mOpt, noLinearization=False, checkOpt=checkOpt)
+
+	print('Convex IRL problem ------------------')
 	mOpt.update()
-	checkOpt.update()
 	mOpt.display()
-	print('Bellman subproblem-----------------')
+
+	print('Bellman subproblem -----------------')
+	checkOpt.update()
 	checkOpt.display()
 
-	weight = { r_name :{(o,a) : 1.0 for (o,a) in rew} for r_name, rew in pModel.reward_features.items()}
+	weight = { r_name : 1.0 for r_name, rew in pModel.reward_features.items()}
 	
 	print(weight)
-	irlPb.compute_optimal_policy_nonconvex_grb(weight)
+	irlPb.from_reward_to_optimal_policy_nonconvex_grb(weight)
