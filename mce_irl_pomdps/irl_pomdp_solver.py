@@ -12,7 +12,7 @@ ZERO_NU_S = 1e-8
 
 #Class for setting up options for the optimization problem
 class OptOptions:
-	def __init__(self, mu=1e4, mu_spec=1e4, maxiter=100, 
+	def __init__(self, mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=20,
 					graph_epsilon=1e-3, discount=0.9, verbose=True):
 		"""
 		Returns the float representation for a constant value
@@ -27,6 +27,7 @@ class OptOptions:
 		self.mu = mu
 		self.mu_spec=mu_spec
 		self.maxiter = maxiter
+		self.maxiter_weight = maxiter_weight
 		self.graph_epsilon = graph_epsilon
 		self.discount=discount
 		self.verbose = verbose
@@ -51,6 +52,7 @@ class IRLSolver:
 		pomdp: POMDP, 
 		sat_thresh: float = 0.95,
 		init_trust_region: float = trustRegion['aug'](4),
+		rew_eps : float = 1e-6,
 		options: OptOptions = OptOptions(),
 		) -> None:
 
@@ -64,6 +66,7 @@ class IRLSolver:
 		self._trust_region = init_trust_region
 		self._sat_thresh = sat_thresh
 		self._options = options
+		self._rew_eps = rew_eps
 		self._pomdp = pomdp
 
 	def from_reward_to_optimal_policy_nonconvex_grb(self, weight):
@@ -113,6 +116,78 @@ class IRLSolver:
 				print('[Slack value spec = {}]'.format(slack_spec.x))
 				print('[Number of steps : {}]'.format(sum( nu_s_val.x for s, nu_s_val in nu_s_spec.items())))
 			print('[Optimal policy : {}]'.format({ o : {p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
+
+	def solve_irl_pomdp_given_traj(self, traj):
+		""" Solve the IRL problem given the feature matching expectation of the
+			sample trajectory
+			:param traj : expected feature reward over the expert trajectory
+		"""
+		# Get the expected feature reward
+		featMatch = self.compute_feature_from_trajectory(traj)
+
+		# Dummy initialization of the weight
+		weight = { r_name : 1.0 for r_name, rew in pModel.reward_features.items()}
+
+		# Create and compute solution of the scp
+		pol, nu_s_a = compute_policy_via_scp(weight, init_problem=True)
+
+		for i in range(self._options.maxiter_weight):
+			# Store the difference between the expected feature by the policy and the matching feature
+			diff_value = 0
+			# Save the new weight
+			new_weight = dict()
+			for r_name, val in weight.items():
+				rew = self._pomdp.reward_features[r_name]
+
+				# Get the reward attained by the policy
+				rew_pol = sum([rew[(o,a)]*p*val*nu_s_a_val \
+								for s, nu_s_a_t in nu_s_a.items() \
+									for a, nu_s_a_val in nu_s_a_t.items()
+										for o, p in self._pomdp.obs_state_distr[s].items()
+								])
+
+				# Get the reward by the feature epectation
+				rew_demo = sum(val*feat_val \
+								for (o,a), feat_val in featMatch[r_name].items()
+								)
+
+				# Save the sum of the difference to detect convergence
+				diff_value += rew_demo - rew_pol
+
+				# Gradient step update
+				new_weight[r_name] = val - (rew_demo - rew_pol) # Gradient step size ?
+
+			if diff_value <= self._rew_eps: # Check if teh desired accuracy was attained
+				break
+
+			# Update new weight
+			weight = new_weight
+
+			# Compute the new policy based on the obtained weight
+			pol, nu_s_a = compute_policy_via_scp(weight, init_problem=False)
+
+			# Do some printing
+			if self._options.verbose:
+				print('---------------- Weight iteration {} -----------------'.format(i))
+				print('[Diff with feature matching] : {} ]'.format(diff_value))
+				print('[New weight value] : {} ]'.format(weight))
+				
+		return weight, pol
+
+	def compute_feature_from_trajectory(self, traj):
+		""" Given a set of trajectories <-> a set of observation action sequences that describes
+			expert trajecties, provide the desired expected feature induced by the trajectory
+			:param traj : A set of observation-action sequences
+		"""
+		featMatch = dict()
+		i_size = 1.0/len(traj)
+		for r_name, rew in self._pomdp.reward_features.items():
+			featMatch[r_name] = {(o,a) : i_size*sum([rew[(o,a)]*self._options.discount^i \
+											for seq_v in traj 
+												for i,(o,a) in enumerate(seq_v)])
+								}
+		return featMatch
+
 
 	def compute_policy_via_scp(self, weight, init_problem=True):
 		""" Given the current weight for each feature functions in the POMDP model,
@@ -170,8 +245,11 @@ class IRLSolver:
 								nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
 		if spec_cost < self._sat_thresh:
 			ent_cost += (spec_cost - self._sat_thresh)*self._options.mu*self._options.mu_spec
-		print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
-		print("[Initialization] Number of steps : {}".format(sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
+		ent_cost += sum( coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
+
+		if self._options.verbose:
+			print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
+			print("[Initialization] Number of steps : {}".format(sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 
 		# Initial trust region
 		trust_region = self._trust_region
@@ -210,7 +288,9 @@ class IRLSolver:
 			# Check if the new policy improves over the last obtained policy
 			if spec_cost_n - self._sat_thresh < -1e-6: # The spec properties are not satisfied
 				ent_cost_n += (spec_cost_n - self._sat_thresh)*self._options.mu*self._options.mu_spec
-
+			# Add the actual reward
+			ent_cost_n += sum( coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
+			
 			if ent_cost_n > ent_cost:
 				policy_k = next_policy
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
@@ -235,6 +315,7 @@ class IRLSolver:
 				if self._options.verbose:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
 					break
+		return policy_k, nu_s_a_k
 
 
 	def init_optimization_problem(self, mOpt, noLinearization=False, checkOpt=None):
