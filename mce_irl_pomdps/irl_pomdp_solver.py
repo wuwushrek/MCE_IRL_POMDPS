@@ -1,5 +1,5 @@
 import numpy as np
-import gurobi as gp
+import gurobipy as gp
 
 from .parser_pomdp import POMDP, PrismModel
 import time
@@ -171,7 +171,7 @@ class IRLSolver:
 				print('---------------- Weight iteration {} -----------------'.format(i))
 				print('[Diff with feature matching] : {} ]'.format(diff_value))
 				print('[New weight value] : {} ]'.format(weight))
-				
+
 		return weight, pol
 
 	def compute_feature_from_trajectory(self, traj):
