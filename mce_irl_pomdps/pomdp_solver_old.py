@@ -336,8 +336,8 @@ class QcqpSolver_affine_simple_fun():
             state_total += self._xInit_state_spec[state.id]
         print("num steps:",state_total)
         print("updated policy",self._policy_Init)
-        print(self._xInit_state_spec)
-        print(self._xInit_spec)
+        #print(self._xInit_state_spec)
+        #print(self._xInit_spec)
 
     def _model_constraints(self,model):
         """
@@ -623,7 +623,7 @@ class QcqpSolver_affine_simple_fun():
             self._encoding.setObjective(self._objective, GRB.MAXIMIZE)
 
             self._encoding.update()
-            print(self._encoding.display())
+            #print(self._encoding.display())
             print('solving...')
             start = time.time()
             self._encoding.optimize()
