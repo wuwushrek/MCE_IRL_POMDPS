@@ -5,7 +5,7 @@ from .parser_pomdp import POMDP, PrismModel
 import time
 
 # A structure to set the rules for reducing and augmenting the trust region
-trustRegion = {'red' : lambda x : ((x - 1) / 1.25 + 1),
+trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
 			   'aug' : lambda x : min(10,(x-1)*1.25+1),
 			   'lim' : 1+1e-4}
 ZERO_NU_S = 1e-8
@@ -297,7 +297,7 @@ class IRLSolver:
 			# Add the actual reward
 			ent_cost_n += sum( coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
 			
-			if ent_cost_n >= ent_cost:
+			if ent_cost_n > ent_cost:
 				policy_k = next_policy
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
