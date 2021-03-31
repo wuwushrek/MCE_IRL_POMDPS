@@ -9,6 +9,7 @@ import stormpy.pomdp
 import stormpy._config as config
 
 import numpy as np
+import stormpy.simulator
 
 
 class POMDP(ABC):
@@ -142,6 +143,18 @@ class POMDP(ABC):
 			probability of perceiving observation obs_id at state_id.
 		"""
 		pass
+
+	@abstractmethod
+	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run):
+		""" Given an observation-based and randomized policy, compute the trajectories induced
+			by the policy until it reaches a trapping state
+			:param sigma : an observation based policy
+			:weight : coefficient associated to each feature reward
+			:max_run : The total number of run
+			:max_iter_per_run : The maximum iteration per run
+		"""
+		pass
+	
 	
 
 class PrismModel(POMDP):
@@ -183,6 +196,9 @@ class PrismModel(POMDP):
 
 		# Save a string representation
 		self._str_repr = self.get_string(pomdp)
+
+		# Do we save the POMDP
+		self.savePomdp = savePomdp
 
 		if savePomdp: # Save the storm pomdp model if required
 			self.pomdp = pomdp
@@ -453,6 +469,43 @@ class PrismModel(POMDP):
 	@property
 	def obs_state_distr(self):
 		return self._obs_state_distr
+
+	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run):
+		assert self.savePomdp, 'POMDP was not saved in memory for simulation'
+		rand_seed = np.random.randint(0, 10000)
+		simulator = stormpy.simulator.create_simulator(self.pomdp, seed=rand_seed)
+		res_traj = list()
+		for i in range(max_run):
+			# Initialize the simulator
+			obs, reward = simulator.restart()
+			# Save the sequence of observation action of this trajectory
+			seq_obs = list()
+			acc_reward = 0 # Accumulated reward
+			firstDone = True # First time reaching done
+			for j in range(max_iter_per_run):
+				# Get the list of available actions
+				actList = [a for a in simulator.available_actions()]
+				# Pick an action in the set of random actions with probability given by the
+				act = np.random.choice(np.array([a for a in sigma[obs]]), 
+							p=np.array([probA for a, probA in sigma[obs].items()]))
+				# Add the observaion, action to the sequence
+				seq_obs.append((obs, act))
+				# Update the state of the simulator
+				obs, reward = simulator.step(actList[act])
+				# Update the reward function
+				acc_reward += sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items())
+				# Check if reaching a looping state
+				if simulator.is_done():
+					if firstDone:
+						firstDone = False
+					else:
+						break
+			res_traj.append(seq_obs)
+			print('---------------------------------------------------------')
+			print('[Run: {}, Number iteration: {}, Reward attained: {} ]'.format(i, j, acc_reward))
+			print('Sequence : {}'.format(seq_obs))
+		return res_traj
+
 
 
 	def get_string(self, pomdp):
