@@ -30,7 +30,7 @@ endobservables
 // o=7 - the target (s13)
 
 
-const double p=0.17;
+const double p=0.1;
 
 module maze
 
@@ -137,18 +137,18 @@ endrewards
 
 // Second reward feature -> weight when getting in a poisonous states
 rewards "poisonous"
-	[east] o = 8 : -10;
-	[west] o = 8 : -10;
-	[north] o = 8 : -10;
-	[south] o = 8 : -10;
+	[east] o = 8 : -1;
+	[west] o = 8 : -1;
+	[north] o = 8 : -1;
+	[south] o = 8 : -1;
 endrewards
 
 // Third reward feature -> reach the goal
 rewards "goal_reach"
-	[east] o = 7 : 20;
-	[west] o = 7 : 20;
-	[north] o = 7 : 20;
-	[south] o = 7 : 20;
+	[east] o = 7 : 1;
+	[west] o = 7 : 1;
+	[north] o = 7 : 1;
+	[south] o = 7 : 1;
 endrewards
 
 // target observation
