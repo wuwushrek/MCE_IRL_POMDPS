@@ -135,7 +135,7 @@ class IRLSolver:
 		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True)
 
 		for i in range(self._options.maxiter_weight):
-			step_size = 1.0 # 1.0/((i+1)**2)
+			step_size =  1.0/((i+1))
 			# Store the difference between the expected feature by the policy and the matching feature
 			diff_value = 0
 			# Save the new weight
@@ -844,9 +844,9 @@ if __name__ == "__main__":
 	pModel = PrismModel("parametric_maze_stochastic.pm", ["P=? [F \"target\"]"])
 
 	# Comoute policy that maximize the max entropy
-	mOptions = OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=20,
+	mOptions = OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=100,
 					graph_epsilon=0, discount=0.9, verbose=True)
-	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=4, options=mOptions)
+	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.25, options=mOptions)
 	weight = { r_name : 0.0 for r_name, rew in pModel.reward_features.items()}
 	irlPb.compute_maxent_policy_via_scp(weight, init_problem=True)
 
@@ -855,18 +855,17 @@ if __name__ == "__main__":
 					graph_epsilon=0, discount=0.9, verbose=True)
 
 	# Build an instance of the IRL problem
-	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=4, options=mOptions)
+	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.25, options=mOptions)
 	weight = { 'poisonous' : 10, 'total_time' : 1, 'goal_reach' : 100}
 	# pol_val = irlPb.from_reward_to_optimal_policy_nonconvex_grb(weight)
 	pol_val = irlPb.from_reward_to_policy_via_scp(weight)
 	print(weight)
 	trajData = pModel.simulate_policy(pol_val, weight, 50, 1000)
 
-
 	# Find the weight and solution
 	mOptions = OptOptions(mu=1e4, mu_spec=1e4, maxiter=200, maxiter_weight=50,
 					graph_epsilon=0, discount=0.9, verbose=True)
 
 	# Build an instance of the IRL problem
-	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=4, rew_eps=1e-3, options=mOptions)
+	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.1, rew_eps=1e-3, options=mOptions)
 	irlPb.solve_irl_pomdp_given_traj(trajData)

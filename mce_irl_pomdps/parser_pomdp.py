@@ -490,10 +490,11 @@ class PrismModel(POMDP):
 							p=np.array([probA for a, probA in sigma[obs].items()]))
 				# Add the observaion, action to the sequence
 				seq_obs.append((obs, act))
-				# Update the state of the simulator
-				obs, reward = simulator.step(actList[act])
 				# Update the reward function
 				acc_reward += sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items())
+				# Update the state of the simulator
+				obs, reward = simulator.step(actList[act])
+
 				# Check if reaching a looping state
 				if simulator.is_done():
 					if firstDone:
