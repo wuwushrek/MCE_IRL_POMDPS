@@ -13,7 +13,7 @@ ZERO_NU_S = 1e-8
 #Class for setting up options for the optimization problem
 class OptOptions:
 	def __init__(self, mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=20,
-					graph_epsilon=1e-3, discount=0.9, verbose=True):
+					graph_epsilon=1e-3, discount=0.9, verbose=True, verbose_weight=True):
 		"""
 		Returns the float representation for a constant value
 		:param mu: parameter for putting penalty on slack variables type: float
@@ -33,6 +33,7 @@ class OptOptions:
 		self.graph_epsilon = graph_epsilon
 		self.discount=discount
 		self.verbose = verbose
+		self.verbose_weight = verbose_weight
 		if graph_epsilon<0:
 			raise RuntimeError("graph epsilon should be larger than 0")
 		if discount<0 or discount>=1:
@@ -165,7 +166,7 @@ class IRLSolver:
 				new_weight[r_name] = weight[r_name] - step_size*gradVal # Gradient step size ?
 
 			if np.abs(diff_value) <= self._rew_eps: # Check if the desired accuracy was attained
-				if self._options.verbose:
+				if self._options.verbose_weight:
 					print('---------------- Weight iteration {} -----------------'.format(i))
 					print('[Diff with feature matching] : {} ]'.format(diff_value))
 					print('[Weight value] : {} ]'.format(weight))
@@ -178,7 +179,7 @@ class IRLSolver:
 			pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=False)
 
 			# Do some printing
-			if self._options.verbose:
+			if self._options.verbose_weight:
 				print('---------------- Weight iteration {} -----------------'.format(i))
 				print('[Diff with feature matching] : {} ]'.format(diff_value))
 				print('[New weight value] : {} ]'.format(weight))
