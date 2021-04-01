@@ -91,7 +91,7 @@ class IRLSolver:
 		# Define the parameters used by Gurobi for this problem
 		mOpt.Params.OutputFlag = self._options.verbose
 		mOpt.Params.Presolve = 2 # More aggressive presolve step
-		mOpt.Params.FeasibilityTol = 1e-6
+		mOpt.Params.FeasibilityTol = 1e-8
 		mOpt.Params.OptimalityTol = 1e-6
 		mOpt.Params.BarConvTol = 1e-6
 		mOpt.Params.NonConvex = 2
@@ -131,7 +131,7 @@ class IRLSolver:
 		featMatch = self.compute_feature_from_trajectory(traj)
 
 		# Dummy initialization of the weight
-		weight = { r_name : 1.0 for r_name, rew in pModel.reward_features.items()}
+		weight = { r_name : 1.0 for r_name, rew in self._pomdp.reward_features.items()}
 
 		# Create and compute solution of the scp
 		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True)
@@ -466,7 +466,7 @@ class IRLSolver:
 					break
 		return policy_k
 
-	def from_reward_to_optimal_policy_mdp_lp(self, weight):
+	def from_reward_to_optimal_policy_mdp_lp(self, weight, gamma=1):
 		""" Given the weight for each feature functions in the underlying MDP model,
 			compute the optimal policy that maximizes the expected reward
 			while satisfying the specifications
@@ -474,6 +474,9 @@ class IRLSolver:
 							and its value be a dictionary with (obs, act) as the key
 								and the associated reward at the value
 		"""
+		# Sanity check
+		assert not (gamma < 1 and self._pomdp.has_sideinfo)
+
 		# Create the optimization problem
 		mOpt = gp.Model('Optimal Policy of the MDP with Gurobi Solver')
 		self.total_solve_time = 0       # Total time elapsed
@@ -497,7 +500,7 @@ class IRLSolver:
 		# Add the constraints between the state visitation count and the state-action visitation count
 		self.constr_state_action_to_state_visition(mOpt, nu_s, nu_s_a, name='vis_count')
 		# Add the bellman equation constraints
-		self.constr_bellman_flow(mOpt, nu_s, nu_s_a=nu_s_a, sigma=None, gamma=1.0, name='bellman')
+		self.constr_bellman_flow(mOpt, nu_s, nu_s_a=nu_s_a, sigma=None, gamma=gamma, name='bellman')
 
 		# Create a slack variable for statisfiability of the spec if any
 		slack_spec = mOpt.addVar(lb=0, name='s2') if self._pomdp.has_sideinfo else 0
