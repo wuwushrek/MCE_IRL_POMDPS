@@ -486,7 +486,7 @@ class PrismModel(POMDP):
 			current_state = simulator._report_state()
 			# Save the sequence of observation action of this trajectory
 			seq_obs = list()
-			acc_reward = 0 # Accumulated reward
+			acc_reward = list() # Accumulated reward
 			firstDone = True # First time reaching done
 			for j in range(max_iter_per_run):
 				# Get the list of available actions
@@ -502,7 +502,7 @@ class PrismModel(POMDP):
 								p=np.array([probA for a, probA in sigma[current_state].items()]))
 				seq_obs.append((obs, act))
 				# Update the reward function
-				acc_reward += sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items())
+				acc_reward.append(sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items()))
 				# Update the state of the simulator
 				obs, reward = simulator.step(actList[act])
 				current_state = simulator._report_state()
@@ -514,9 +514,9 @@ class PrismModel(POMDP):
 						break
 			res_traj.append(seq_obs)
 			rew_list.append(acc_reward)
-			print('---------------------------------------------------------')
-			print('[Run: {}, Number iteration: {}, Reward attained: {} ]'.format(i, j, acc_reward))
-			print('Sequence : {}'.format(seq_obs))
+			# print('---------------------------------------------------------')
+			# print('[Run: {}, Number iteration: {}, Reward attained: {} ]'.format(i, j, sum(acc_reward)))
+			# print('Sequence : {}'.format(seq_obs))
 		return res_traj, rew_list
 
 
