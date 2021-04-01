@@ -114,7 +114,7 @@ class IRLSolver:
 		if self._options.verbose and mOpt.status == gp.GRB.OPTIMAL:
 			print ('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 			print('[Total solving time : {}]'.format(self.total_solve_time))
-			print('[Optimal expected reward : {}]'.format(mOpt.objVal))
+			print('[Optimal expected reward : {}]'.format(mOpt.objVal * self._options.mu))
 			if self._pomdp.has_sideinfo:
 				print('[Satisfaction of the formula = {}]'.format( sum(nu_s_spec[s].x for s in self._pomdp.prob1A) ))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
@@ -259,9 +259,9 @@ class IRLSolver:
 		ent_cost, spec_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k =\
 				self.verify_solution(self.bellmanOpt, self.nu_s_ver, policy_k, self.bellConstr, 
 								nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
-		if spec_cost < self._sat_thresh:
+		if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
 			ent_cost += (spec_cost - self._sat_thresh)*self._options.mu*self._options.mu_spec
-		ent_cost += sum( coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
+		ent_cost += sum( coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
 
 		if self._options.verbose:
 			print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
@@ -302,10 +302,10 @@ class IRLSolver:
 			self.checking_policy_time += time.time() - curr_time
 
 			# Check if the new policy improves over the last obtained policy
-			if spec_cost_n - self._sat_thresh < -1e-6: # The spec properties are not satisfied
+			if self._pomdp.has_sideinfo and spec_cost_n - self._sat_thresh < -1e-6: # The spec properties are not satisfied
 				ent_cost_n += (spec_cost_n - self._sat_thresh)*self._options.mu*self._options.mu_spec
 			# Add the actual reward
-			ent_cost_n += sum( coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
+			ent_cost_n += sum( coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
 			
 			if ent_cost_n > ent_cost:
 				policy_k = next_policy
@@ -322,7 +322,8 @@ class IRLSolver:
 				print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
 				print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
 				print("[Iter {}]: Entropy cost {}, Spec SAT : {}".format(i, ent_cost, spec_cost))
-				print("[Iter {}]: Number of steps : {}".format(i,sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
+				if self._pomdp.has_sideinfo:
+					print("[Iter {}]: Number of steps : {}".format(i,sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 				print("[Iter {}]: Update time : {}s, Checking time : {}s, Solve time: {}s".format(i,
 						self.update_constraint_time, self.checking_policy_time, self.total_solve_time))
 				print("[Iter {}]: Trust region : {}".format(i,trust_region))
@@ -389,9 +390,9 @@ class IRLSolver:
 				self.verify_solution(self.bellmanOpt, self.nu_s_ver, policy_k, self.bellConstr, 
 								nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
 		ent_cost = 0 # No need for entropy here
-		if spec_cost < self._sat_thresh:
+		if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
 			ent_cost += (spec_cost - self._sat_thresh)*self._options.mu*self._options.mu_spec
-		ent_cost += sum( -coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
+		ent_cost += sum( -coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
 
 		if self._options.verbose:
 			print("[Initialization] Reward attained {}, Spec SAT : {}".format(ent_cost, spec_cost))
@@ -433,10 +434,10 @@ class IRLSolver:
 			self.checking_policy_time += time.time() - curr_time
 
 			# Check if the new policy improves over the last obtained policy
-			if spec_cost_n - self._sat_thresh < -1e-6: # The spec properties are not satisfied
+			if self._pomdp.has_sideinfo and spec_cost_n - self._sat_thresh < -1e-6: # The spec properties are not satisfied
 				ent_cost_n += (spec_cost_n - self._sat_thresh)*self._options.mu*self._options.mu_spec
 			# Add the actual reward
-			ent_cost_n += sum( -coeff*val for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
+			ent_cost_n += sum( -coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
 			
 			if ent_cost_n > ent_cost:
 				policy_k = next_policy
@@ -453,7 +454,8 @@ class IRLSolver:
 				print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
 				print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
 				print("[Iter {}]: Reward attained {}, Spec SAT : {}".format(i, ent_cost, spec_cost))
-				print("[Iter {}]: Number of steps : {}".format(i,sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
+				if self._pomdp.has_sideinfo:
+					print("[Iter {}]: Number of steps : {}".format(i,sum( nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 				print("[Iter {}]: Update time : {}s, Checking time : {}s, Solve time: {}s".format(i,
 						self.update_constraint_time, self.checking_policy_time, self.total_solve_time))
 				print("[Iter {}]: Trust region : {}".format(i,trust_region))
@@ -531,7 +533,7 @@ class IRLSolver:
 		if self._options.verbose and mOpt.status == gp.GRB.OPTIMAL:
 			print ('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 			print('[Total solving time : {}]'.format(self.total_solve_time))
-			print('[Optimal expected reward : {}]'.format(mOpt.objVal))
+			print('[Optimal expected reward : {}]'.format(mOpt.objVal * self._options.mu))
 			if self._pomdp.has_sideinfo:
 				print('[Satisfaction of the formula = {}]'.format( sum(nu_s[s].x for s in self._pomdp.prob1A) ))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
@@ -910,7 +912,9 @@ class IRLSolver:
 								}
 
 		# Get the incurred cost
-		spec_cost = sum( res_nu_s_spec[s] for s in self._pomdp.prob1A)
+		spec_cost = 0
+		if self._pomdp.has_sideinfo:
+			spec_cost = sum( res_nu_s_spec[s] for s in self._pomdp.prob1A)
 
 		# Get the entropy cost -> Threshold for zero
 		ent_cost = sum( 0 if res_nu_s[s]<=ZERO_NU_S else (-np.log(res_nu_s_a[s][a]/res_nu_s[s])*res_nu_s_a[s][a])\
