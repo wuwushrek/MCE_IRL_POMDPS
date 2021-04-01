@@ -8,6 +8,7 @@ import time
 trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
 			   'aug' : lambda x : min(10,(x-1)*1.25+1),
 			   'lim' : 1+1e-4}
+gradientStepSize = lambda iterVal, gradVal : 1.0/np.power(iterVal, 0.6)
 ZERO_NU_S = 1e-8
 
 #Class for setting up options for the optimization problem
@@ -136,8 +137,6 @@ class IRLSolver:
 		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True)
 
 		for i in range(self._options.maxiter_weight):
-			step_size =  1.0/((i+1))
-			# step_size = 1.0/np.power(i+1, 0.6)
 			# Store the difference between the expected feature by the policy and the matching feature
 			diff_value = 0
 			diff_value_dict = dict()
@@ -159,6 +158,9 @@ class IRLSolver:
 				# Save the sum of the difference to detect convergence
 				diff_value += rew_demo - rew_pol
 				diff_value_dict[r_name] = rew_demo - rew_pol
+
+			# Gradient step
+			step_size = gradientStepSize(i+1,diff_value_dict)
 
 			# Update the weight values
 			for r_name, gradVal in diff_value_dict.items():
@@ -183,6 +185,8 @@ class IRLSolver:
 				print('---------------- Weight iteration {} -----------------'.format(i))
 				print('[Diff with feature matching] : {} ]'.format(diff_value))
 				print('[New weight value] : {} ]'.format(weight))
+				print("Update time : {}s, Checking time : {}s, Solve time: {}s".format(
+						self.update_constraint_time, self.checking_policy_time, self.total_solve_time))
 
 		return weight, pol
 
@@ -948,7 +952,7 @@ if __name__ == "__main__":
 
 	# Find the weight and solution
 	mOptions = OptOptions(mu=1e4, mu_spec=1e4, maxiter=200, maxiter_weight=50,
-					graph_epsilon=0, discount=0.9, verbose=True)
+					graph_epsilon=0, discount=0.9, verbose=False, verbose_weight=True)
 
 	# Build an instance of the IRL problem
 	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.1, rew_eps=1e-3, options=mOptions)
