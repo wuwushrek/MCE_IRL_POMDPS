@@ -16,5 +16,5 @@ setup(
    url="https://github.com/wuwushrek/MCE_IRL_POMDPS.git",
    packages=['mce_irl_pomdps'],
    package_dir={'mce_irl_pomdps': 'mce_irl_pomdps/'},
-   install_requires=['numpy', 'gurobipy'],
+   install_requires=['numpy', 'matplotlib'],
 )
