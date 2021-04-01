@@ -136,8 +136,10 @@ class IRLSolver:
 
 		for i in range(self._options.maxiter_weight):
 			step_size =  1.0/((i+1))
+			# step_size = 1.0/np.power(i+1, 0.6)
 			# Store the difference between the expected feature by the policy and the matching feature
 			diff_value = 0
+			diff_value_dict = dict()
 			# Save the new weight
 			new_weight = dict()
 			for r_name, val in weight.items():
@@ -155,9 +157,12 @@ class IRLSolver:
 
 				# Save the sum of the difference to detect convergence
 				diff_value += rew_demo - rew_pol
+				diff_value_dict[r_name] = rew_demo - rew_pol
 
+			# Update the weight values
+			for r_name, gradVal in diff_value_dict.items():
 				# Gradient step update
-				new_weight[r_name] = val - step_size*(rew_demo - rew_pol) # Gradient step size ?
+				new_weight[r_name] = weight[r_name] - step_size*gradVal # Gradient step size ?
 
 			if np.abs(diff_value) <= self._rew_eps: # Check if the desired accuracy was attained
 				if self._options.verbose:
@@ -453,6 +458,81 @@ class IRLSolver:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
 					break
 		return policy_k
+
+	def from_reward_to_optimal_policy_mdp_lp(self, weight):
+		""" Given the weight for each feature functions in the underlying MDP model,
+			compute the optimal policy that maximizes the expected reward
+			while satisfying the specifications
+			:param weight : A dictionary with its keys being the reward feature name
+							and its value be a dictionary with (obs, act) as the key
+								and the associated reward at the value
+		"""
+		# Create the optimization problem
+		mOpt = gp.Model('Optimal Policy of the MDP with Gurobi Solver')
+		self.total_solve_time = 0       # Total time elapsed
+		self.init_encoding_time = 0     # Time for encoding the full problem
+
+		if self._options.verbose:
+			print('Initialize Linear subproblem to be solved at iteration k')
+
+		# Util functions for one/two-dimension dictionaries of positve gurobi variable 
+		buildVar1D = lambda pb, data, idV : { s : pb.addVar(lb=0, name='{}[{}]'.format(idV,s)) for s in data}
+		buildVar2D = lambda pb, data, idV : { s : { a : pb.addVar(lb=0, name='{}[{},{}]'.format(idV,s,a)) for a in dataVal } 
+												   for s, dataVal in data.items() }
+
+		# Store the current time for compute time logging
+		curr_time = time.time()
+
+		# Store the state visitation count
+		nu_s = buildVar1D(mOpt, self._pomdp.states, 'nu')
+		# Store the state action visitation count
+		nu_s_a = buildVar2D(mOpt, self._pomdp.states_act, 'nu')
+		# Add the constraints between the state visitation count and the state-action visitation count
+		self.constr_state_action_to_state_visition(mOpt, nu_s, nu_s_a, name='vis_count')
+		# Add the bellman equation constraints
+		self.constr_bellman_flow(mOpt, nu_s, nu_s_a=nu_s_a, sigma=None, gamma=1.0, name='bellman')
+
+		# Create a slack variable for statisfiability of the spec if any
+		slack_spec = mOpt.addVar(lb=0, name='s2') if self._pomdp.has_sideinfo else 0
+
+		# Constraint for satisfaction of the formula
+		if self._pomdp.has_sideinfo:
+			mOpt.addLConstr(gp.LinExpr([*((1,nu_s[s]) for s in self._pomdp.prob1A), (1,slack_spec)]),
+						gp.GRB.GREATER_EQUAL, self._sat_thresh, name='sat_constr')
+		self.init_encoding_time += time.time() - curr_time
+
+		# Define the parameters used by Gurobi for this problem
+		mOpt.Params.OutputFlag = self._options.verbose
+		mOpt.Params.Presolve = 2 # More aggressive presolve step
+		mOpt.Params.FeasibilityTol = 1e-6
+		mOpt.Params.OptimalityTol = 1e-6
+		mOpt.Params.BarConvTol = 1e-6
+
+		# Build the objective function -> Negative expected reward
+		linExprCost = gp.LinExpr(self.compute_expected_reward(nu_s_a, weight))
+		# Add to the cost the penalization from the cost of staisfying the spec
+		if self._pomdp.has_sideinfo:
+			linExprCost.add(slack_spec,self._options.mu_spec)
+
+		# Set the objective function -> Negative sign to compensate the outout of compute_expected_reward
+		mOpt.setObjective(-linExprCost, gp.GRB.MAXIMIZE)
+
+		# Solve the problem
+		curr_time = time.time()
+		mOpt.optimize()
+		self.total_solve_time += time.time()-curr_time
+
+		# Do some printing
+		if self._options.verbose and mOpt.status == gp.GRB.OPTIMAL:
+			print ('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
+			print('[Total solving time : {}]'.format(self.total_solve_time))
+			print('[Optimal expected reward : {}]'.format(mOpt.objVal))
+			if self._pomdp.has_sideinfo:
+				print('[Satisfaction of the formula = {}]'.format( sum(nu_s[s].x for s in self._pomdp.prob1A) ))
+				print('[Slack value spec = {}]'.format(slack_spec.x))
+				print('[Number of steps : {}]'.format(sum( nu_s_val.x for s, nu_s_val in nu_s.items())))
+			print('[Optimal policy : {}]'.format({ s : { a : (p.x/nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0/len(actVal)) for a, p in actVal.items()} for s, actVal in nu_s_a.items()}))
+		return { s : { a : (p.x/nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0/len(actVal)) for a, p in actVal.items()} for s, actVal in nu_s_a.items()}
 
 
 	def init_optimization_problem(self, mOpt, noLinearization=False, checkOpt=None):
@@ -853,14 +933,17 @@ if __name__ == "__main__":
 	# Find the policy that maximizes the expected reward
 	mOptions = OptOptions(mu=1, mu_spec=1e4, maxiter=100, maxiter_weight=20,
 					graph_epsilon=0, discount=0.9, verbose=True)
-
 	# Build an instance of the IRL problem
 	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.25, options=mOptions)
 	weight = { 'poisonous' : 10, 'total_time' : 1, 'goal_reach' : 100}
 	# pol_val = irlPb.from_reward_to_optimal_policy_nonconvex_grb(weight)
-	pol_val = irlPb.from_reward_to_policy_via_scp(weight)
-	print(weight)
-	trajData = pModel.simulate_policy(pol_val, weight, 50, 1000)
+	# pol_val = irlPb.from_reward_to_policy_via_scp(weight)
+	# obs_based = True
+	pol_val = irlPb.from_reward_to_optimal_policy_mdp_lp(weight)
+	obs_based = False
+
+	trajData, rewData = pModel.simulate_policy(pol_val, weight, 50, 1000, 
+							obs_based=obs_based, stop_at_accepting_state=True)
 
 	# Find the weight and solution
 	mOptions = OptOptions(mu=1e4, mu_spec=1e4, maxiter=200, maxiter_weight=50,

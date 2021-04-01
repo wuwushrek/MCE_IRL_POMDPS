@@ -145,13 +145,16 @@ class POMDP(ABC):
 		pass
 
 	@abstractmethod
-	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run):
+	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
+						obs_based=True, stop_at_accepting_state=True):
 		""" Given an observation-based and randomized policy, compute the trajectories induced
 			by the policy until it reaches a trapping state
 			:param sigma : an observation based policy
 			:weight : coefficient associated to each feature reward
 			:max_run : The total number of run
 			:max_iter_per_run : The maximum iteration per run
+			:param obs_based : True if the policy is observation based
+			:param stop_at_accepting_state : When reaching an accepting state, stopy the current run
 		"""
 		pass
 	
@@ -470,14 +473,17 @@ class PrismModel(POMDP):
 	def obs_state_distr(self):
 		return self._obs_state_distr
 
-	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run):
+	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
+							obs_based=True, stop_at_accepting_state=True):
 		assert self.savePomdp, 'POMDP was not saved in memory for simulation'
 		rand_seed = np.random.randint(0, 10000)
 		simulator = stormpy.simulator.create_simulator(self.pomdp, seed=rand_seed)
 		res_traj = list()
+		rew_list = list()
 		for i in range(max_run):
 			# Initialize the simulator
 			obs, reward = simulator.restart()
+			current_state = simulator._report_state()
 			# Save the sequence of observation action of this trajectory
 			seq_obs = list()
 			acc_reward = 0 # Accumulated reward
@@ -485,27 +491,33 @@ class PrismModel(POMDP):
 			for j in range(max_iter_per_run):
 				# Get the list of available actions
 				actList = [a for a in simulator.available_actions()]
-				# Pick an action in the set of random actions with probability given by the
-				act = np.random.choice(np.array([a for a in sigma[obs]]), 
-							p=np.array([probA for a, probA in sigma[obs].items()]))
 				# Add the observaion, action to the sequence
+				if obs_based:
+					# Pick an action in the set of random actions with probability given by the policy
+					act = np.random.choice(np.array([a for a in sigma[obs]]), 
+								p=np.array([probA for a, probA in sigma[obs].items()]))
+				else:
+					# Pick an action in the set of random actions with probability given by the
+					act = np.random.choice(np.array([a for a in sigma[current_state]]), 
+								p=np.array([probA for a, probA in sigma[current_state].items()]))
 				seq_obs.append((obs, act))
 				# Update the reward function
 				acc_reward += sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items())
 				# Update the state of the simulator
 				obs, reward = simulator.step(actList[act])
-
+				current_state = simulator._report_state()
 				# Check if reaching a looping state
-				if simulator.is_done():
+				if simulator.is_done() and stop_at_accepting_state:
 					if firstDone:
 						firstDone = False
 					else:
 						break
 			res_traj.append(seq_obs)
+			rew_list.append(acc_reward)
 			print('---------------------------------------------------------')
 			print('[Run: {}, Number iteration: {}, Reward attained: {} ]'.format(i, j, acc_reward))
 			print('Sequence : {}'.format(seq_obs))
-		return res_traj
+		return res_traj, rew_list
 
 
 
