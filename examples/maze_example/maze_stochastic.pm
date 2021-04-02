@@ -30,7 +30,7 @@ endobservables
 // o=7 - the target (s13)
 
 
-const double p=0.17;
+const double p=0.1;
 
 module maze
 
@@ -38,18 +38,17 @@ module maze
 	o : [0..9];
 	
 	// initialisation
-	[] s=-1 -> 1/12 : (s'=0) & (o'=1)
-			 + 1/12 : (s'=1) & (o'=2)
-			 + 1/12 : (s'=2) & (o'=3)
-			 + 1/12 : (s'=3) & (o'=2)
-			 + 1/12 : (s'=4) & (o'=4)
-			 + 1/12 : (s'=5) & (o'=5)
-			 + 1/12 : (s'=6) & (o'=5)
-			 + 1/12 : (s'=7) & (o'=5)
-			 + 1/12 : (s'=8) & (o'=5)
-			 + 1/12 : (s'=9) & (o'=5)
-			 + 1/12 : (s'=10) & (o'=5)
-			 + 1/12 : (s'=11) & (o'=6);
+	[] s=-1 -> 1/11 : (s'=0) & (o'=1)
+			 + 1/11 : (s'=1) & (o'=2)
+			 + 1/11 : (s'=2) & (o'=3)
+			 + 1/11 : (s'=3) & (o'=2)
+			 + 1/11 : (s'=4) & (o'=4)
+			 + 1/11 : (s'=5) & (o'=5)
+			 + 1/11 : (s'=6) & (o'=5)
+			 + 1/11 : (s'=7) & (o'=5)
+			 + 1/11 : (s'=8) & (o'=5)
+			 + 1/11 : (s'=9) & (o'=5)
+			 + 1/11 : (s'=10) & (o'=5);
 	
 	// moving around the maze
 	
@@ -108,10 +107,7 @@ module maze
 	[north] s=10 -> p : (s'=10) + (1-2*p) : (s'=7) + p : (s'=12) & (o'=8);
 	[south] s=10 -> p : (s'=10) + p : (s'=7) + (1-2*p) : (s'=12) & (o'=8);
 
-	[east] s=11 -> (1-p): (s'=11) + p : (s'=8) & (o'=5);
-	[west] s=11 -> (1-p): (s'=11) + p : (s'=8) & (o'=5);
-	[north] s=11 -> p: (s'=11) + (1-p) : (s'=8) & (o'=5);
-	[south] s=11 -> (1-p): (s'=11) + p : (s'=8) & (o'=5);
+	[done] s=11 -> (s'=11) & (o'=6);
 
 	[east] s=12 -> (s'=12) & (o'=8);
 	[west] s=12 -> (s'=12) & (o'=8);
@@ -137,22 +133,22 @@ endrewards
 
 // Second reward feature -> weight when getting in a poisonous states
 rewards "poisonous"
-	[east] o = 8 : -10;
-	[west] o = 8 : -10;
-	[north] o = 8 : -10;
-	[south] o = 8 : -10;
+	[east] o = 8 : -1;
+	[west] o = 8 : -1;
+	[north] o = 8 : -1;
+	[south] o = 8 : -1;
 endrewards
 
 // Third reward feature -> reach the goal
 rewards "goal_reach"
-	[east] o = 7 : 20;
-	[west] o = 7 : 20;
-	[north] o = 7 : 20;
-	[south] o = 7 : 20;
+	[east] o = 7 : 1;
+	[west] o = 7 : 1;
+	[north] o = 7 : 1;
+	[south] o = 7 : 1;
 endrewards
 
 // target observation
 label "target" = o=9;
 
 // Poisonous states
-label "poison" = o=8;
+label "poison_light" = o=8;
