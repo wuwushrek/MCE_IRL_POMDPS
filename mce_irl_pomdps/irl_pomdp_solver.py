@@ -122,19 +122,20 @@ class IRLSolver:
 			print('[Optimal policy : {}]'.format({ o : { a : p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
 		return { o : { a : val.x for a, val in actList.items()} for o, actList in sigma.items()}
 
-	def solve_irl_pomdp_given_traj(self, traj):
+	def solve_irl_pomdp_given_traj(self, traj, includeQuadCost=False):
 		""" Solve the IRL problem given the feature matching expectation of the
 			sample trajectory
 			:param traj : expected feature reward over the expert trajectory
 		"""
 		# Get the expected feature reward
 		featMatch = self.compute_feature_from_trajectory(traj)
+		featMatching = featMatch if includeQuadCost else None
 
 		# Dummy initialization of the weight
 		weight = { r_name : 1.0 for r_name, rew in self._pomdp.reward_features.items()}
 
 		# Create and compute solution of the scp
-		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True)
+		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching)
 
 		for i in range(self._options.maxiter_weight):
 			# Store the difference between the expected feature by the policy and the matching feature
@@ -178,7 +179,7 @@ class IRLSolver:
 			weight = new_weight
 
 			# Compute the new policy based on the obtained weight
-			pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=False)
+			pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=False, featMatch=featMatching)
 
 			# Do some printing
 			if self._options.verbose_weight:
@@ -205,12 +206,14 @@ class IRLSolver:
 		return featMatch
 
 
-	def compute_maxent_policy_via_scp(self, weight, init_problem=True):
+	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None):
 		""" Given the current weight for each feature functions in the POMDP model,
 			and the feature expected reward, compute the optimal policy 
 			that maximizes the max causal entropy
 			:param weight : the coefficient associated to each feature function
-			: init_problem : True If the optimization problem hasn't been initialize before
+			:init_problem : True If the optimization problem hasn't been initialize before
+			:featMatch : The vector of feature matching, if not given then 
+						||(feat_match- expected reward)||^2 is not added to the cost function
 		"""
 		# Create the optimization problem
 		if init_problem:
@@ -261,7 +264,12 @@ class IRLSolver:
 								nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
 		if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
 			ent_cost += (spec_cost - self._sat_thresh)*self._options.mu*self._options.mu_spec
+		
+		# Add the cost associated to the linear expected discounted reward given nu_s_a ( multiply back by mu)
 		ent_cost += sum( coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
+		# Add ||(feat_match- expected reward)||^2 if feat_match is given
+		if featMatch is not None:
+			ent_cost -= self.compute_quad_featmatch_value(nu_s_a_k, featMatch)*self._options.mu
 
 		if self._options.verbose:
 			print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
@@ -270,8 +278,12 @@ class IRLSolver:
 		# Initial trust region
 		trust_region = self._trust_region
 
-		# Get the total expected reward given theta
+		# Get the total expected reward given theta (it is divided by self._options.mu)
 		linExprReward = self.compute_expected_reward(self.nu_s_a, weight)
+		# Get the cost term ||(feat_match- expected reward)||^2 if feat_match is given
+		quadExprReward = 0
+		if featMatch is not None:
+			quadExprReward = self.compute_quad_featmatch(self.nu_s_a, featMatch)
 
 		for i in range(self._options.maxiter):
 
@@ -285,7 +297,8 @@ class IRLSolver:
 			penCostList = self.compute_entropy_cost(nu_s_k, nu_s_a_k, self.nu_s, 
 								self.nu_s_a, self.slack_nu_p, self.slack_nu_n, self.slack_nu_p_spec, 
 								self.slack_nu_n_spec, self.slack_spec)
-			self.scpOpt.setObjective(gp.LinExpr([*linExprReward,*penCostList]), gp.GRB.MAXIMIZE)
+			# Something more efficient that adding the quadratic term like this-> TODO
+			self.scpOpt.setObjective(gp.LinExpr([*linExprReward,*penCostList])-quadExprReward, gp.GRB.MAXIMIZE)
 			self.update_constraint_time += time.time() - curr_time
 
 			# Solve the optimization problem
@@ -306,7 +319,10 @@ class IRLSolver:
 				ent_cost_n += (spec_cost_n - self._sat_thresh)*self._options.mu*self._options.mu_spec
 			# Add the actual reward
 			ent_cost_n += sum( coeff*val*self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
-			
+			# Add ||(feat_match- expected reward)||^2 if feat_match is given
+			if featMatch is not None:
+				ent_cost_n -= self.compute_quad_featmatch_value(nu_s_a_k_n, featMatch)*self._options.mu
+
 			if ent_cost_n > ent_cost:
 				policy_k = next_policy
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
@@ -774,6 +790,47 @@ class IRLSolver:
 		# 	)
 		return val_expr
 
+	def compute_quad_featmatch(self, nu_s_a, feat_match):
+		""" Compute the gurobi quadratic expression for 
+			||(feat_match- expected reward)||^2
+			:param nu_s_a : the state-action visitation count gurobi variable
+			:param featmatch : the expected feature matching
+		"""
+		quadTerm = 0
+		for rname, featVal in feat_match.items():
+			rewDict = self._pomdp.reward_features[rname]
+			tempV = gp.LinExpr(
+					 [(rewDict[(o,a)]*p, nu_s_a_val )\
+						for s, nu_s_a_t in nu_s_a.items() \
+							for a, nu_s_a_val in nu_s_a_t.items()
+								for o, p in self._pomdp.obs_state_distr[s].items()]
+					)
+			# Add - feat_match
+			tempV.addConstant(-featVal)
+			quadTerm += tempV**2
+		return quadTerm/self._options.mu
+
+	def compute_quad_featmatch_value(self, nu_s_a, feat_match):
+		""" Compute the  actual value of
+			||(feat_match- expected reward)||^2, given the value of the state-action
+			visitation count and the feat match
+			:param nu_s_a : the state-action visitation count
+			:param featmatch : the expected feature matching
+		"""
+		quadTerm = 0
+		for rname, featVal in feat_match.items():
+			rewDict = self._pomdp.reward_features[rname]
+			tempV = sum(
+					 [(rewDict[(o,a)]*p*nu_s_a_val )\
+						for s, nu_s_a_t in nu_s_a.items() \
+							for a, nu_s_a_val in nu_s_a_t.items()
+								for o, p in self._pomdp.obs_state_distr[s].items()]
+					)
+			# Add - feat_match
+			tempV += -featVal
+			quadTerm += tempV**2
+		return quadTerm/self._options.mu
+
 	def update_linearized_bil_sonstr(self, mOpt, constrLin, nu_s_past, sigma_past, nu_s, sigma):
 		""" Update the constraints implied by the linearization of the bilinear constraint
 			around the solution of the past iterations
@@ -963,4 +1020,4 @@ if __name__ == "__main__":
 
 	# Build an instance of the IRL problem
 	irlPb = IRLSolver(pModel, sat_thresh=0.95, init_trust_region=1.1, rew_eps=1e-3, options=mOptions)
-	irlPb.solve_irl_pomdp_given_traj(trajData)
+	irlPb.solve_irl_pomdp_given_traj(trajData,includeQuadCost=True)
