@@ -24,7 +24,7 @@ pomdp_reachavoidsideinfo = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [
 
 # Options for the solver
 options_opt = irl_solver.OptOptions(mu=1e2, mu_spec=0, maxiter=20, maxiter_weight=20,
-                      graph_epsilon=0, discount=0.9, verbose=True)
+                      graph_epsilon=0, discount=0.999, verbose=True)
 # Build Instances of the IRL problem
 irlPb_nosideinfo = irl_solver.IRLSolver(pomdp_nosideinfo, init_trust_region=4, options=options_opt)
 # True reward in the POMDP environment
@@ -88,8 +88,8 @@ irl_solver.ZERO_NU_S = 1e-8
 
 # Parameter for the optimization
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 1.5)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
-                      graph_epsilon=0, discount=0.9, verbose=False, verbose_weight=True)
+options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=100,
+                      graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb1 = irl_solver.IRLSolver(pomdp_nosideinfo, sat_thresh=0, init_trust_region=2, rew_eps=1e-4, options=options_opt)
 
 
@@ -125,8 +125,8 @@ weight_mdp_15, pol_mdp_15 = irlPb1.solve_irl_pomdp_given_traj(traj_mdp_15)
 
 
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 1.5)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
-                      graph_epsilon=0, discount=0.9, verbose=False, verbose_weight=True)
+options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=100,
+                      graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb3 = irl_solver.IRLSolver(pomdp_reachavoidsideinfo, sat_thresh=0.95, init_trust_region=2, rew_eps=1e-4, options=options_opt)
 
 
@@ -186,7 +186,7 @@ def plot_pol(pol_val, color='red', nb_run=10, nb_iter_run=30, label='dum', alpha
 
 np.random.seed(501)
 nb_run = 300
-max_iter_per_run = 500
+max_iter_per_run = 250
 plt.figure()
 plot_pol(pol_val_mdp, color='blue', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=False, label='Optimal policy on the MDP', alpha=1)
 plot_pol(pol_val_opt, color='green', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Optimal policy on the POMDP', alpha=0.8)
@@ -206,7 +206,7 @@ plt.tight_layout()
 
 np.random.seed(501)
 nb_run = 300
-max_iter_per_run = 500
+max_iter_per_run = 2500
 plt.figure()
 plot_pol(pol_val_mdp, color='blue', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=False, label='Optimal policy on the MDP', alpha=1, plot_std=True)
 plot_pol(pol_val_opt, color='green', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Optimal policy on the POMDP', alpha=0.8, plot_std=True)
