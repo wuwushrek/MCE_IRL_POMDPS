@@ -26,9 +26,9 @@ pomdp_reachavoidsideinfo = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [
 options_opt = irl_solver.OptOptions(mu=1e2, mu_spec=0, maxiter=20, maxiter_weight=20,
                       graph_epsilon=0, discount=0.999, verbose=True)
 # Build Instances of the IRL problem
-irlPb_nosideinfo = irl_solver.IRLSolver(pomdp_nosideinfo, init_trust_region=4, options=options_opt)
+irlPb_nosideinfo = irl_solver.IRLSolver(pomdp_nosideinfo, init_trust_region=1.1, options=options_opt)
 # True reward in the POMDP environment
-weight = { 'poisonous' : 10, 'total_time' : 0.1, 'goal_reach' : 50}
+weight = { 'poisonous' : 10, 'total_time' : 0.1, 'goal_reach' : 100}
 
 
 # In[9]:
@@ -62,10 +62,10 @@ pol_val_mdp = {o : {a : 0 if val<0 else val for a, val in actDict.items()} for o
 
 
 # Generate Trajectory of different length using the state-based policy from the MDP
-obs_based = False
-traj_mdp_15, rewData_15 = pomdp_nosideinfo.simulate_policy(pol_val_mdp, weight, 30, 50, 
+obs_based = True
+traj_mdp_15, rewData_15 = pomdp_nosideinfo.simulate_policy(pol_val_opt, weight, 30, 50,
                                             obs_based=obs_based, stop_at_accepting_state=True)
-traj_mdp_30, rewData_30 = pomdp_nosideinfo.simulate_policy(pol_val_mdp, weight, 100, 50, 
+traj_mdp_30, rewData_30 = pomdp_nosideinfo.simulate_policy(pol_val_opt, weight, 1000, 1000,
                                             obs_based=obs_based, stop_at_accepting_state=True)
 
 
@@ -74,7 +74,7 @@ traj_mdp_30, rewData_30 = pomdp_nosideinfo.simulate_policy(pol_val_mdp, weight, 
 
 # Define some parameters when optimizing the problems
 # Set the parameter for the step size in the update of the weight
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 0.6)
+irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.01/np.power(iterVal, 0.6)
 # Set the parameter for the trust region
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'aug' : lambda x : min(10,(x-1)*1.25+1),
@@ -88,23 +88,23 @@ irl_solver.ZERO_NU_S = 1e-8
 
 # Parameter for the optimization
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 1.5)
-options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=100,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb1 = irl_solver.IRLSolver(pomdp_nosideinfo, sat_thresh=0, init_trust_region=2, rew_eps=1e-4, options=options_opt)
+irlPb1 = irl_solver.IRLSolver(pomdp_nosideinfo, sat_thresh=0, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 
 
 # In[15]:
 
 
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 0.6)
+irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.05/np.power(iterVal+1, 0.6)
 weight_mdp_30, pol_mdp_30 = irlPb1.solve_irl_pomdp_given_traj(traj_mdp_30)
 
 
 # In[16]:
 
 
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 0.6)
-weight_mdp_15, pol_mdp_15 = irlPb1.solve_irl_pomdp_given_traj(traj_mdp_15)
+#irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.01/np.power(iterVal+1, 0.6)
+#weight_mdp_15, pol_mdp_15 = irlPb1.solve_irl_pomdp_given_traj(traj_mdp_15)
 
 
 # In[ ]:
@@ -124,24 +124,35 @@ weight_mdp_15, pol_mdp_15 = irlPb1.solve_irl_pomdp_given_traj(traj_mdp_15)
 # In[18]:
 
 
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 1.5)
-options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e4, maxiter=100, maxiter_weight=100,
+irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.05/np.power(iterVal+1, 0.6)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb3 = irl_solver.IRLSolver(pomdp_reachavoidsideinfo, sat_thresh=0.95, init_trust_region=2, rew_eps=1e-4, options=options_opt)
+irlPb3 = irl_solver.IRLSolver(pomdp_reachavoidsideinfo, sat_thresh=0.70, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 
 
 # In[19]:
 
 
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 0.6)
-weight_avoidreach_mdp_30, pol_avoidreach_mdp_30 = irlPb3.solve_irl_pomdp_given_traj(traj_mdp_30)
+irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.05/np.power(iterVal+1, 0.6)
+weight_avoidreach_spec_070_mdp_30, pol_avoidreach_spec_070_mdp_30= irlPb3.solve_irl_pomdp_given_traj(traj_mdp_30)
+
+# options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
+#                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
+# irlPb4 = irl_solver.IRLSolver(pomdp_reachavoidsideinfo, sat_thresh=0.90, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
+
+
+# In[19]:
+
+
+# irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.05/np.power(iterVal+1, 0.6)
+# weight_avoidreach_spec_090_mdp_30, pol_avoidreach_spec_090_mdp_30 = irlPb4.solve_irl_pomdp_given_traj(traj_mdp_30)
 
 
 # In[20]:
 
 
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0/np.power(iterVal, 0.6)
-weight_avoidreach_mdp_15, pol_avoidreach_mdp_15 = irlPb3.solve_irl_pomdp_given_traj(traj_mdp_15)
+#irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.01/np.power(iterVal, 0.6)
+#weight_avoidreach_mdp_15, pol_avoidreach_mdp_15 = irlPb3.solve_irl_pomdp_given_traj(traj_mdp_15)
 
 
 # In[ ]:
@@ -168,7 +179,7 @@ import matplotlib.pyplot as plt
 
 def plot_pol(pol_val, color='red', nb_run=10, nb_iter_run=30, label='dum', alpha=0.5, is_obs=True, plot_std=False):
     obs_based = True
-    _, rewData = pomdp_nosideinfo.simulate_policy(pol_val, weight, nb_run, nb_iter_run, 
+    _, rewData = pomdp_nosideinfo.simulate_policy(pol_val, weight, nb_run, nb_iter_run,
                         obs_based=is_obs, stop_at_accepting_state=False)
     arr_rewData = np.cumsum(np.array(rewData), axis=1)
     mean_rew = np.mean(arr_rewData, axis = 0)
@@ -186,13 +197,14 @@ def plot_pol(pol_val, color='red', nb_run=10, nb_iter_run=30, label='dum', alpha
 
 np.random.seed(501)
 nb_run = 300
-max_iter_per_run = 250
+max_iter_per_run = 2500
 plt.figure()
 plot_pol(pol_val_mdp, color='blue', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=False, label='Optimal policy on the MDP', alpha=1)
 plot_pol(pol_val_opt, color='green', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Optimal policy on the POMDP', alpha=0.8)
 # plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
-plot_pol(pol_avoidreach_mdp_15, color='orange', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with side information', alpha = 0.6)
-plot_pol(pol_mdp_30, color='cyan', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with no side information', alpha=0.2)
+plot_pol(pol_avoidreach_spec_070_mdp_30 , color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with side information with thresh 0.70', alpha = 0.4)
+
+plot_pol(pol_mdp_30, color='orange', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with no side information', alpha=0.2)
 plt.ylabel('Mean Accumulated reward')
 plt.xlabel('Time steps')
 plt.grid(True)
@@ -211,12 +223,11 @@ plt.figure()
 plot_pol(pol_val_mdp, color='blue', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=False, label='Optimal policy on the MDP', alpha=1, plot_std=True)
 plot_pol(pol_val_opt, color='green', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Optimal policy on the POMDP', alpha=0.8, plot_std=True)
 # plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
-plot_pol(pol_avoidreach_mdp_15, color='orange', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with side information', alpha = 0.6, plot_std=True)
-plot_pol(pol_mdp_30, color='cyan', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with no side information', alpha=0.2, plot_std=True)
+plot_pol(pol_avoidreach_spec_070_mdp_30 , color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with side information with thresh 0.70', alpha = 0.4)
+plot_pol(pol_mdp_30, color='orange', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True, label='Learned policy with no side information', alpha=0.2, plot_std=True)
 plt.ylabel('Mean Accumulated reward')
 plt.xlabel('Time steps')
 plt.grid(True)
 plt.legend(ncol=2, bbox_to_anchor=(0,1), loc='lower left', columnspacing=1.0)
 plt.tight_layout()
 plt.show()
-
