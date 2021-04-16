@@ -172,8 +172,8 @@ class IRLSolver:
 
             # Update the weight values
             for r_name, gradVal in diff_value_dict.items():
-                # Gradient step update
-                new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(rew_demo))  # Gradient step size ?
+                # Gradient step update, scaled by the quadratic cost, and the magnitude of the feature
+                new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(featMatch[r_name]))  # Gradient step size ?
 
             if np.abs(diff_value) <= self._rew_eps:  # Check if the desired accuracy was attained
                 if self._options.verbose_weight:
