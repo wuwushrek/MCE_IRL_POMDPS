@@ -145,6 +145,13 @@ class POMDP(ABC):
 		pass
 
 	@abstractmethod
+	def string_repr_state(self, state_id):
+		""" Give the string representation of the state id in the format it was
+			encoded by the user inside the PRISM file or whatever format is used.
+		"""
+		pass
+
+	@abstractmethod
 	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
 						obs_based=True, stop_at_accepting_state=True):
 		""" Given an observation-based and randomized policy, compute the trajectories induced
@@ -163,7 +170,7 @@ class POMDP(ABC):
 class PrismModel(POMDP):
 	""" Instantiate a POMDP model written in the prism format
 	"""
-	def __init__(self, path_prism, formulas=[], export=True, savePomdp=True):
+	def __init__(self, path_prism, formulas=[], memory_len=1, export=True, savePomdp=True):
 		""" Parse the prism file to build the POMDP model, then
 			compute the DTMC induced by the given formula to obtain both
 			the set of states that guarantees the satisfaction of the
@@ -180,28 +187,29 @@ class PrismModel(POMDP):
 		self._path_prism = path_prism
 		self._formulas = formulas
 		self._export = export
+		self.memory_len = memory_len
 
 		# Variable saving if side info was given or not
 		self._has_sideinfo = (len(self._formulas) > 0)
 
-		# Build the model
-		prism_program, pomdp = self.build_model()
+		# Do we save the POMDP
+		self.savePomdp = savePomdp
 
-		# Build the observation, state, state-action, and state-observation mapping
-		self.build_model_sets(pomdp)
+		# Build the model
+		prism_program, _ = self.build_model()
 
 		# Build the state satysfying the spec with prob 1 and 
 		# the state not satysfying the sepc
-		self.build_prob01_prop(prism_program)
+		pomdp = self.build_prob01_prop(prism_program)
+
+		# Build the observation, state, state-action, and state-observation mapping
+		self.build_model_sets(pomdp)
 
 		# Build the reward model
 		self.build_reward_model(pomdp)
 
 		# Save a string representation
 		self._str_repr = self.get_string(pomdp)
-
-		# Do we save the POMDP
-		self.savePomdp = savePomdp
 
 		if savePomdp: # Save the storm pomdp model if required
 			self.pomdp = pomdp
@@ -234,18 +242,18 @@ class PrismModel(POMDP):
 
 		# Export the pomdp representation
 		if self._export:
-			path_pmc = "export_pomdp_"  + self._path_prism
+			path_pmc = "export_origin_pomdp_"  + self._path_prism
 			stormpy.export_to_drn(pomdp , path_pmc)
-
-		# Save the number of states
-		self._n_state = pomdp.nr_states
-		self._n_obs = pomdp.nr_observations
 
 		return prism_program, pomdp
 
 	def build_model_sets(self, pomdp):
 		""" Initialize the data for the model
 		"""
+		# Save the number of states
+		self._n_state = pomdp.nr_states
+		self._n_obs = pomdp.nr_observations
+
 		# Define the state space
 		self._states = list()
 		for state in pomdp.states:
@@ -262,6 +270,12 @@ class PrismModel(POMDP):
 		for state_id in self._states:
 			obs_id = pomdp.get_observation(state_id)
 			self._obs_state_distr[state_id] = {obs_id : 1.0}
+
+		# Define the state valuations
+		state_val = pomdp.state_valuations
+		self.state_string = dict()
+		for state in pomdp.states:
+			self.state_string[state.id] = state_val.get_string(state.id)
 
 		# Define the full list of state action and observation action
 		self._states_act = dict() # Save for each state the allowed actions
@@ -371,10 +385,15 @@ class PrismModel(POMDP):
 
 		# Construct the memory for the FSC
 		memory_builder = stormpy.pomdp.PomdpMemoryBuilder()
-		memory = memory_builder.build(stormpy.pomdp.PomdpMemoryPattern.selective_counter, 1)
+		memory = memory_builder.build(stormpy.pomdp.PomdpMemoryPattern.selective_counter, self.memory_len)
 		
 		# apply the memory onto the POMDP to get the cartesian product
 		pomdp = stormpy.pomdp.unfold_memory(pomdp , memory, add_memory_labels=True, keep_state_valuations=True)
+
+		# Export the pomdp representation if enable
+		if self._export:
+			path_pmc = "export_pomdp_formula_mem_"  + self._path_prism
+			stormpy.export_to_drn(pomdp , path_pmc)
 		
 		# Apply the unknown FSC to obtain a pmc from the POMDP
 		pmc = stormpy.pomdp.apply_unknown_fsc(pomdp, stormpy.pomdp.PomdpFscApplicationMode.simple_linear)
@@ -416,6 +435,7 @@ class PrismModel(POMDP):
 				firstIter = False
 			self._prob0E = prob0E_state | self._prob0E
 			self._prob1A = prob1A_state & self._prob1A
+		return pomdp
 
 	@property
 	def n_state(self):
@@ -427,11 +447,11 @@ class PrismModel(POMDP):
 
 	@property
 	def prob0E(self):
-		return self._prob0E
+		return self._prob0E if self._has_sideinfo else set()
 
 	@property
 	def prob1A(self):
-		return self._prob1A
+		return self._prob1A if self._has_sideinfo else set()
 
 	@property
 	def has_sideinfo(self):
@@ -472,6 +492,9 @@ class PrismModel(POMDP):
 	@property
 	def obs_state_distr(self):
 		return self._obs_state_distr
+
+	def string_repr_state(self, state_id):
+		return self.state_string[state_id]
 
 	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
 							obs_based=True, stop_at_accepting_state=True):
@@ -520,7 +543,6 @@ class PrismModel(POMDP):
 		return res_traj, rew_list
 
 
-
 	def get_string(self, pomdp):
 		""" String represenattion of this POMDP
 		"""
@@ -531,8 +553,6 @@ class PrismModel(POMDP):
 
 		# Get parameteres used in the model file
 		state_val = pomdp.state_valuations
-		choice_lab = pomdp.choice_labeling
-		obs_val = pomdp.observation_valuations
 		
 		# Print the intiial state
 		for state in pomdp.initial_states:
@@ -540,10 +560,9 @@ class PrismModel(POMDP):
 		
 		# Print the observation modelStateValuation
 		for state in pomdp.states:
-			str_repr += 'State id: {} {}, observation: {} {} \n'.format(
+			str_repr += 'State id: {} {}, observation: {} \n'.format(
 				state.id, state_val.get_string(state.id),
-				pomdp.get_observation(state.id),
-				obs_val.get_string(pomdp.get_observation(state.id)))
+				pomdp.get_observation(state.id))
 
 		# Print all the states actions transition with their valuations and rewards 
 		for state_repr in pomdp.states:
@@ -555,16 +574,64 @@ class PrismModel(POMDP):
 				for r_id, r_val in pomdp.reward_models.items():
 					dictR[r_id] = r_val.get_state_action_reward(c_index)
 				str_repr += '-----------------------\n'
-				str_repr += "State id: {} {}, Action id: {} {}, Rewards: {}\n".format(
+				str_repr += "State id: {} {}, Action id: {}, Rewards: {}\n".format(
 					state_repr.id, state_val.get_string(state_repr.id), 
-					action.id, choice_lab.get_labels_of_choice(c_index), dictR)
+					action.id, dictR)
 				for trans in action.transitions:
-					str_repr += 'State id: {} {}, Action id: {} {} ---> Next state: {} {}, with prob {}\n'.format(
+					str_repr += 'State id: {} {}, Action id: {} ---> Next state: {} {}, with prob {}\n'.format(
 							state_repr.id, state_val.get_string(state_repr.id), 
-							action.id, choice_lab.get_labels_of_choice(c_index),
+							action.id,
 							trans.column, state_val.get_string(trans.column), np.around(trans.value(),3)
 							)
+		str_repr += 'Memory policy size : {}\n'.format(self.memory_len)
 		return str_repr
+
+	# def get_string(self, pomdp):
+	# 	""" String represenattion of this POMDP
+	# 	"""
+	# 	# Print the STorm representation of the POMDP
+	# 	str_repr = ""
+	# 	str_repr += "POMDP Model\n"
+	# 	str_repr += pomdp.__str__()
+
+	# 	# Get parameteres used in the model file
+	# 	print(dir(stormpy.SparsePomdp))
+	# 	state_val = pomdp.state_valuations
+	# 	choice_lab = pomdp.choice_labeling
+	# 	obs_val = pomdp.observation_valuations
+		
+	# 	# Print the intiial state
+	# 	for state in pomdp.initial_states:
+	# 		str_repr += "Initial state: {} {}\n".format(state, state_val.get_string(state))
+		
+	# 	# Print the observation modelStateValuation
+	# 	for state in pomdp.states:
+	# 		str_repr += 'State id: {} {}, observation: {} {} \n'.format(
+	# 			state.id, state_val.get_string(state.id),
+	# 			pomdp.get_observation(state.id),
+	# 			obs_val.get_string(pomdp.get_observation(state.id)))
+
+	# 	# Print all the states actions transition with their valuations and rewards 
+	# 	for state_repr in pomdp.states:
+	# 		for action in state_repr.actions:
+	# 			# Get the choice index
+	# 			c_index = pomdp.get_choice_index(state_repr.id, action.id)
+	# 			print('state, action, Choice index : ', state_repr.id, action.id, c_index)
+	# 			dictR = dict()
+	# 			# Reward model
+	# 			for r_id, r_val in pomdp.reward_models.items():
+	# 				dictR[r_id] = r_val.get_state_action_reward(c_index)
+	# 			str_repr += '-----------------------\n'
+	# 			str_repr += "State id: {} {}, Action id: {} {}, Rewards: {}\n".format(
+	# 				state_repr.id, state_val.get_string(state_repr.id), 
+	# 				action.id, choice_lab.get_labels_of_choice(c_index), dictR)
+	# 			for trans in action.transitions:
+	# 				str_repr += 'State id: {} {}, Action id: {} {} ---> Next state: {} {}, with prob {}\n'.format(
+	# 						state_repr.id, state_val.get_string(state_repr.id), 
+	# 						action.id, choice_lab.get_labels_of_choice(c_index),
+	# 						trans.column, state_val.get_string(trans.column), np.around(trans.value(),3)
+	# 						)
+	# 	return str_repr
 
 	def __str__(self):
 		return self._str_repr
