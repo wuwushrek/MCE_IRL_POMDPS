@@ -940,7 +940,7 @@ class IRLSolver:
 
 			for a in actionList:
 				# First, add the entropy terms
-				if nu_s_past[s] > 0 and addEntropy:
+				if nu_s_past[s] > 0 and nu_s_a_past[s][a] > 0 and addEntropy:
 					nu_ratio = nu_s_a_past[s][a] / nu_s_past[s]
 					listCostTerm.append((nu_ratio / self._options.mu, nu_s[s]))
 					listCostTerm.append((-(np.log(nu_ratio) + 1) / self._options.mu, nu_s_a[s][a]))
