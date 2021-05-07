@@ -89,6 +89,10 @@ class MazeDemo(MiniGridEnv):
 			seed= seed,
 			see_through_walls=True)
 
+	def set_initial_state(self, state):
+		self.agent_pos = self.state_to_pos[state]
+		self.agent_dir = 0
+		
 	def _gen_grid(self, width, height):
 		self.grid = Grid(width, height)
 		# self.grid.wall_rect(0, 0, width, height)
@@ -180,8 +184,8 @@ class MazeDemo(MiniGridEnv):
 
 		# Compute which cells are visible to the agent
 		vis_mask = self.get_neighbor_walls()
-		print(vis_mask)
-		print(self.agent_pos)
+		# print(vis_mask)
+		# print(self.agent_pos)
 
 		# Mask of which cells to highlight
 		highlight_mask = np.zeros(shape=(self.width, self.height), dtype=bool)
