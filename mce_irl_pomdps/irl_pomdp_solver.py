@@ -128,13 +128,13 @@ class IRLSolver:
 				'[Optimal policy : {}]'.format({o: {a: p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
 		return {o: {a: val.x for a, val in actList.items()} for o, actList in sigma.items()}
 
-	def solve_irl_pomdp_given_traj(self, traj, includeQuadCost=True):
+	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=True):
 		""" Solve the IRL problem given the feature matching expectation of the
 			sample trajectory
-			:param traj : expected feature reward over the expert trajectory
+			:param featMatch : feature counts from the expert
 		"""
 		# Get the expected feature reward
-		featMatch = self.compute_feature_from_trajectory(traj)
+		#featMatch = self.compute_feature_from_trajectory(traj)
 		featMatching = featMatch if includeQuadCost else None
 
 		# Dummy initialization of the weight
@@ -213,6 +213,7 @@ class IRLSolver:
 								sum([rew[(o, a)] * (self._options.discount ** i) \
 									 for seq_v in traj \
 									 for i, (o, a) in enumerate(seq_v)])
+
 		return featMatch
 
 	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None):
