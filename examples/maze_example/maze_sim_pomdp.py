@@ -14,7 +14,7 @@ import numpy as np
 
 # Set seed for reproductibility -> IncREMENT MEMORY LEN FOR HIGHER PERFORMANCE
 np.random.seed(201)
-pomdp_r = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [F \"target\"]"], memory_len=1, export=True)
+pomdp_r_init = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [F \"target\"]"], memory_len=3, export=True)
 
 
 # In[3]:
@@ -31,8 +31,8 @@ weight = { 'poisonous' : 100, 'total_time' : 1, 'goal_reach' : 100}
 
 
 # Build the instance without side information
-pomdp_r._has_sideinfo = False # Ignore the side information for the first part
-irlPb_nosi = irl_solver.IRLSolver(pomdp_r, init_trust_region=4, options=options_opt)
+pomdp_r_init._has_sideinfo = False # Ignore the side information for the first part
+irlPb_nosi = irl_solver.IRLSolver(pomdp_r_init, init_trust_region=4, options=options_opt)
 
 
 # In[5]:
@@ -60,8 +60,8 @@ pol_val_mdp = irlPb_nosi.from_reward_to_optimal_policy_mdp_lp(weight, gamma=opti
 
 
 # Generate Trajectory of different length using the state-based policy from the MDP
-obs_based = False
-traj_pomdp_30, rewData_pomdp_30 = pomdp_r.simulate_policy(pol_val_mdp , weight, 1000, 1000,
+obs_based = True
+traj_pomdp_30, rewData_pomdp_30 = pomdp_r_init.simulate_policy(pol_val_grb_nosi , weight, 1000, 1000,
                                             obs_based=obs_based, stop_at_accepting_state=True)
 
 
@@ -91,7 +91,7 @@ irl_solver.ZERO_NU_S = 1e-8
 # Parameter for the optimization\
 pomdp_r._has_sideinfo = False
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=100, rho_weight= 1000,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb1 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0, init_trust_region=4, rew_eps=1e-4, options=options_opt)
 weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
@@ -103,7 +103,7 @@ weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_
 # Parameter for the optimization\
 pomdp_r._has_sideinfo = True
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=100, rho_weight= 1000,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb2 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0.8, init_trust_region=4, rew_eps=1e-4, options=options_opt)
 weight_pomdp_30_si, pol_pomdp_30_si = irlPb2.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
@@ -125,9 +125,9 @@ irl_solver.ZERO_NU_S = 1e-8
 
 
 # Parameter for the optimization\
-pomdp_r._has_sideinfo = False
+pomdp_r_mem._has_sideinfo = False
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=100, rho_weight= 1000,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb1_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0, init_trust_region=4, rew_eps=1e-4, options=options_opt)
 weight_pomdp_30_3mem, pol_pomdp_30_3mem = irlPb1_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
@@ -137,9 +137,9 @@ weight_pomdp_30_3mem, pol_pomdp_30_3mem = irlPb1_mem.solve_irl_pomdp_given_traj(
 
 
 # Parameter for the optimization\
-pomdp_r._has_sideinfo = True
+pomdp_r_mem._has_sideinfo = True
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=100, rho_weight= 1000,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
 irlPb2_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0.8, init_trust_region=4, rew_eps=1e-4, options=options_opt)
 weight_pomdp_30_si_3mem, pol_pomdp_30_si_3mem = irlPb2_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
@@ -158,9 +158,9 @@ weight_pomdp_30_si_3mem, pol_pomdp_30_si_3mem = irlPb2_mem.solve_irl_pomdp_given
 np.random.seed(501)
 nb_run = 300
 max_iter_per_run = 2000
-_, rewDataPomdpOpt = pomdp_r.simulate_policy(pol_val_grb_nosi, weight, nb_run, max_iter_per_run, 
+_, rewDataPomdpOpt = pomdp_r_init.simulate_policy(pol_val_grb_nosi, weight, nb_run, max_iter_per_run,
                         obs_based=True, stop_at_accepting_state=False)
-_, rewDataMdpOpt = pomdp_r.simulate_policy(pol_val_mdp, weight, nb_run, max_iter_per_run, 
+_, rewDataMdpOpt = pomdp_r_init.simulate_policy(pol_val_mdp, weight, nb_run, max_iter_per_run,
                         obs_based=False, stop_at_accepting_state=False)
 _, rewDataPomdpNoSi = pomdp_r.simulate_policy(pol_pomdp_30, weight, nb_run, max_iter_per_run,
                         obs_based=True, stop_at_accepting_state=False)
