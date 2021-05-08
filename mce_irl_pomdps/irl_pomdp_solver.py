@@ -143,7 +143,10 @@ class IRLSolver:
 
 
 		# Create and compute solution of the scp
-		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching)
+		pol, nu_s_a, _ = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching,trust_prev=None)
+
+		#set initial trust region for IRL part
+		trust_reg_val= self._trust_region
 
 		for i in range(self._options.maxiter_weight):
 			# Store the difference between the expected feature by the policy and the matching feature
@@ -179,7 +182,7 @@ class IRLSolver:
 				# Gradient step update, scaled by the quadratic cost, and the magnitude of the feature
 				# new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(featMatch[r_name]))  # Gradient step size ?
 				# new_weight[r_name] = weight[r_name] + self._options.rho_weight * diff_value * gradVal
-				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name])
+				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name]+rew_pol_dict[r_name])
 				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * gradVal /abs(featMatch[r_name])
 			if np.abs(diff_value) <= self._rew_eps:  # Check if the desired accuracy was attained
 				if self._options.verbose_weight:
@@ -191,8 +194,9 @@ class IRLSolver:
 			# Update new weight
 			weight = new_weight
 
-			# Compute the new policy based on the obtained weight
-			pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=False, featMatch=featMatching, initPolicy=pol)
+			# Compute the new policy based on the obtained weight and previous trust region
+			pol, nu_s_a,trust_reg_val = self.compute_maxent_policy_via_scp(weight, init_problem=False,
+																		   featMatch=featMatching, initPolicy=pol,trust_prev=trust_reg_val)
 
 			# Do some printing
 			if self._options.verbose_weight:
@@ -219,7 +223,7 @@ class IRLSolver:
 
 		return featMatch
 
-	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None):
+	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None,trust_prev=None):
 		""" Given the current weight for each feature functions in the POMDP model,
 			and the feature expected reward, compute the optimal policy
 			that maximizes the max causal entropy
@@ -227,6 +231,7 @@ class IRLSolver:
 			:init_problem : True If the optimization problem hasn't been initialize before
 			:featMatch : The vector of feature matching, if not given then
 						||(feat_match - expected reward)||^2 is not added to the cost function
+			:trust_prev: current trust region from the previous IRL iteration
 		"""
 		# Create the optimization problem
 		if init_problem:
@@ -268,6 +273,12 @@ class IRLSolver:
 			self.bellmanOpt.Params.OptimalityTol = 1e-6
 			self.bellmanOpt.Params.BarConvTol = 1e-6
 
+		trust_region = self._trust_region
+
+		#initialize trust region from the previous IRL step, if it exists
+		if trust_prev is not None:
+			trust_region=trust_prev
+
 		# Initialize policy at iteration k
 		if initPolicy is not None:
 			policy_k = initPolicy
@@ -293,7 +304,6 @@ class IRLSolver:
 			print("[Initialization] Number of steps : {}".format(sum(nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 
 		# Initial trust region
-		trust_region = self._trust_region
 
 		# Get the total expected reward given theta (it is divided by self._options.mu)
 		linExprReward = self.compute_expected_reward(self.nu_s_a, weight)
@@ -359,6 +369,11 @@ class IRLSolver:
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
 				ent_cost, spec_cost = ent_cost_n, spec_cost_n
 				trust_region = trustRegion['aug'](trust_region)
+
+				#only update policy once per iteration during IRL
+				if featMatch is not None:
+					break
+
 			else:
 				trust_region = trustRegion['red'](trust_region)
 				if self._options.verbose:
@@ -375,13 +390,17 @@ class IRLSolver:
 																								  self.update_constraint_time,
 																								  self.checking_policy_time,
 																								  self.total_solve_time))
-				print("[Iter {}]: Trust region : {}".format(i, trust_region))
+			print("[Iter {}]: Trust region : {}".format(i, trust_region))
 
 			if trust_region < trustRegion['lim']:
 				if self._options.verbose:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
+				#just to prevent trust region from shrinking forever
+				if featMatch is not None:
+					trust_region = trustRegion['aug'](trust_region)
+
 				break
-		return policy_k, nu_s_a_k
+		return policy_k, nu_s_a_k, trust_region
 
 	def from_reward_to_policy_via_scp(self, weight):
 		"""Given the weight for each feature functions in the POMDP model,
