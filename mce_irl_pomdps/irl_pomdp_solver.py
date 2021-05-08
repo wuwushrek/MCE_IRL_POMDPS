@@ -139,6 +139,8 @@ class IRLSolver:
 
 		# Dummy initialization of the weight
 		weight = {r_name: 1.0 for r_name, rew in self._pomdp.reward_features.items()}
+		rew_pol_dict = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
+
 
 		# Create and compute solution of the scp
 		pol, nu_s_a = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching)
@@ -159,7 +161,7 @@ class IRLSolver:
 							   for a, nu_s_a_val in nu_s_a_t.items()
 							   for o, p in self._pomdp.obs_state_distr[s].items()
 							   ])
-
+				rew_pol_dict[r_name]=rew_pol
 				# Get the reward by the feature epectation
 				rew_demo = featMatch[r_name]
 
@@ -167,6 +169,7 @@ class IRLSolver:
 				diff_value += np.abs(rew_demo - rew_pol)
 				diff_value_dict[r_name] = rew_demo - rew_pol
 				print(rew_pol,rew_demo,r_name)
+
 
 			# Gradient step
 			step_size = gradientStepSize(i + 1, diff_value_dict)
@@ -177,7 +180,7 @@ class IRLSolver:
 				# new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(featMatch[r_name]))  # Gradient step size ?
 				# new_weight[r_name] = weight[r_name] + self._options.rho_weight * diff_value * gradVal
 				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name])
-
+				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * gradVal /abs(featMatch[r_name])
 			if np.abs(diff_value) <= self._rew_eps:  # Check if the desired accuracy was attained
 				if self._options.verbose_weight:
 					print('---------------- Weight iteration {} -----------------'.format(i))
