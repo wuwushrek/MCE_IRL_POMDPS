@@ -34,8 +34,8 @@ const double p=0.1;
 
 module maze
 
-	s : [-1..14];
-	o : [0..9];
+	s : [-1..15];
+	o : [0..10];
 	
 	// initialisation
 	[] s=-1 -> 1/11 : (s'=0) & (o'=1)
@@ -106,8 +106,13 @@ module maze
 	[west] s=10 ->  (1-2*p) : (s'=10) + p : (s'=7) + p : (s'=12) & (o'=8);
 	[north] s=10 -> p : (s'=10) + (1-2*p) : (s'=7) + p : (s'=12) & (o'=8);
 	[south] s=10 -> p : (s'=10) + p : (s'=7) + (1-2*p) : (s'=12) & (o'=8);
+	//loop when we reach trap poison
+	[east] s=11 -> (s'=15) & (o'=10);
+	[west] s=11 -> (s'=15) & (o'=10);
+	[north] s=11 -> (s'=15) & (o'=10);
+	[south] s=11 -> (s'=15) & (o'=10);
+	[done] s=15 -> (s'=15);
 
-	[done] s=11 -> (s'=11) & (o'=6);
 
 	[east] s=12 -> (s'=12) & (o'=8);
 	[west] s=12 -> (s'=12) & (o'=8);
@@ -137,6 +142,10 @@ rewards "poisonous"
 	[west] o = 8 : -1;
 	[north] o = 8 : -1;
 	[south] o = 8 : -1;
+	[east] o = 6 : -1;
+	[west] o = 6 : -1;
+	[north] o = 6 : -1;
+	[south] o = 6 : -1;
 endrewards
 
 // Third reward feature -> reach the goal
@@ -149,6 +158,9 @@ endrewards
 
 // target observation
 label "target" = o=9;
+
+// trap poison
+label "bad_poison" = o=10;
 
 // Poisonous states
 label "poison_light" = o=8;

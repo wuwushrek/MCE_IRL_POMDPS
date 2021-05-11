@@ -145,6 +145,9 @@ class IRLSolver:
 		#rmspropdict
 		rmsprop = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
 
+		#momentum
+		momentum = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
+
 
 		# Create and compute solution of the scp
 		pol, nu_s_a, _ = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching,trust_prev=None)
@@ -158,6 +161,8 @@ class IRLSolver:
 			diff_value_dict = dict()
 			# Save the new weight
 			new_weight = dict()
+			step_size = gradientStepSize(i + 1, diff_value_dict)
+
 			print("---------------- Printing visitation counts---------------- ")
 			for r_name, val in weight.items():
 				rew = self._pomdp.reward_features[r_name]
@@ -177,19 +182,22 @@ class IRLSolver:
 				diff_value_dict[r_name] = rew_demo - rew_pol
 				print(rew_pol,rew_demo,r_name)
 				#incorporate rms prop to make sure that the gradients may not vary in magnitude
-				rmsprop[r_name]=0.9*rmsprop[r_name]+(1-0.9)*(diff_value_dict[r_name]**2)
+				rmsprop[r_name]=0.9*rmsprop[r_name]+(1-0.9)*np.power(diff_value_dict[r_name],2)
+
+				momentum[r_name]=(0.0)*momentum[r_name]+(1-0.0)*(step_size/np.power(rmsprop[r_name] + 1e-8,0.5))*diff_value_dict[r_name]
+				#rmsprop[r_name]=0.9*rmsprop[r_name]+(0.1)*(diff_value_dict[r_name])
+
 				print(rmsprop[r_name])
 			# Gradient step
-			step_size = gradientStepSize(i + 1, diff_value_dict)
-
+			print(step_size)
 			# Update the weight values
 			for r_name, gradVal in diff_value_dict.items():
 				# Gradient step update, scaled by the quadratic cost, and the magnitude of the feature
 				# new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(featMatch[r_name]))  # Gradient step size ?
-				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /((momentum[r_name]+1e-8)**0.5)
+				new_weight[r_name] = weight[r_name] + self._options.rho_weight *momentum[r_name]
 
 				#this update is a way to "normalize" the features, the "rmsprop" part is related to RMSprop
-				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal / ((abs(rew_pol_dict[r_name]))*(rmsprop[r_name] + 1e-8) ** 0.5)
+				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal / ((abs(rew_pol_dict[r_name]))*(rmsprop[r_name] + 1e-8) ** 0.5)
 
 			# new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name]+rew_pol_dict[r_name])
 				#featMatch[r_name]=0.99*featMatch[r_name]+0.01*rew_pol_dict[r_name]
