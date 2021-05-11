@@ -21,10 +21,10 @@ pomdp_r_init = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [F \"target\"
 
 
 # Options for the solver
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=50, maxiter_weight=50,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100,
                       graph_epsilon=0, discount=0.999, verbose=True)
 # True reward in the POMDP environment
-weight = { 'poisonous' : 100, 'total_time' : 1, 'goal_reach' : 100}
+weight = { 'poisonous' : 10, 'total_time' : 0.1, 'goal_reach' : 50}
 
 
 # In[4]:
@@ -60,8 +60,8 @@ pol_val_mdp = irlPb_nosi.from_reward_to_optimal_policy_mdp_lp(weight, gamma=opti
 
 
 # Generate Trajectory of different length using the state-based policy from the MDP
-obs_based = True
-traj_pomdp_30, rewData_pomdp_30 = pomdp_r_init.simulate_policy(pol_val_grb_nosi , weight, 1000, 1000,
+obs_based = False
+traj_pomdp_30, rewData_pomdp_30 = pomdp_r_init.simulate_policy(pol_val_mdp, weight, 1000, 1000,
                                             obs_based=obs_based, stop_at_accepting_state=True)
 
 
@@ -79,8 +79,8 @@ pomdp_r = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [F \"target\"]"], 
 # Define some parameters when optimizing the problems
 # Set the parameter for the trust region
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
-                          'aug' : lambda x : min(10,(x-1)*1.5+1),
-                          'lim' : 1+1e-4}
+                          'aug' : lambda x : min(1.5,(x-1)*1.5+1),
+                          'lim' : 1+1e-8}
 # Set the parameter for minimum state visitation count to be considered as zero
 irl_solver.ZERO_NU_S = 1e-8
 
@@ -91,9 +91,10 @@ irl_solver.ZERO_NU_S = 1e-8
 # Parameter for the optimization\
 pomdp_r._has_sideinfo = False
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=1000, maxiter_weight=250, rho=0e-4, rho_weight= 1,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb1 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0, init_trust_region=4, rew_eps=1e-4, options=options_opt)
+irlPb1 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
 
@@ -103,20 +104,22 @@ weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_
 # Parameter for the optimization\
 pomdp_r._has_sideinfo = True
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=1000, maxiter_weight=250,rho=0e-4, rho_weight= 1,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb2 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0.8, init_trust_region=4, rew_eps=1e-4, options=options_opt)
+irlPb2 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0.8, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_si, pol_pomdp_30_si = irlPb2.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
 pomdp_r_mem = parser_pomdp.PrismModel("maze_stochastic.pm", ["P=? [F \"target\"]"], memory_len=3, export=True)
 # In[9]:
+print(features_traj_pomdp_30)
 
 
 # Define some parameters when optimizing the problems
 # Set the parameter for the trust region
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
-                          'aug' : lambda x : min(10,(x-1)*1.5+1),
-                          'lim' : 1+1e-4}
+                          'aug' : lambda x : min(1.5,(x-1)*1.5+1),
+                          'lim' : 1+1e-8}
 # Set the parameter for minimum state visitation count to be considered as zero
 irl_solver.ZERO_NU_S = 1e-8
 
@@ -127,23 +130,27 @@ irl_solver.ZERO_NU_S = 1e-8
 # Parameter for the optimization\
 pomdp_r_mem._has_sideinfo = False
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
-                      graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb1_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0, init_trust_region=4, rew_eps=1e-4, options=options_opt)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=250, rho=0e-4, rho_weight= 1,
+                      graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+irlPb1_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_3mem, pol_pomdp_30_3mem = irlPb1_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
 
 # In[11]:
 
+print(features_traj_pomdp_30)
 
 # Parameter for the optimization\
 pomdp_r_mem._has_sideinfo = True
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0 # /np.power(iterVal, 0.6)
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=100, rho=1e-2, rho_weight= 10,
-                      graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb2_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0.8, init_trust_region=4, rew_eps=1e-4, options=options_opt)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, maxiter_weight=250, rho=0e-4, rho_weight= 1,
+                      graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+irlPb2_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0.8, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_si_3mem, pol_pomdp_30_si_3mem = irlPb2_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
+print(features_traj_pomdp_30)
 
 # In[20]:
 
