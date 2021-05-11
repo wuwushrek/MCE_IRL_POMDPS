@@ -8,7 +8,7 @@ import time
 trustRegion = {'red': lambda x: ((x - 1) / 1.5 + 1),
 			   'aug': lambda x: min(10, (x - 1) * 1.25 + 1),
 			   'lim': 1 + 1e-4}
-gradientStepSize = lambda iterVal, gradVal: 1.0 / np.power(iterVal, 0.6)
+gradientStepSize = lambda iterVal, gradVal: 1.0 / np.power(iterVal+2, 0.5)
 ZERO_NU_S = 1e-8
 
 
@@ -135,11 +135,15 @@ class IRLSolver:
 		"""
 		# Get the expected feature reward
 		#featMatch = self.compute_feature_from_trajectory(traj)
+		#featMatchdict=featMatch
 		featMatching = featMatch if includeQuadCost else None
 
 		# Dummy initialization of the weight
 		weight = {r_name: 1.0 for r_name, rew in self._pomdp.reward_features.items()}
 		rew_pol_dict = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
+
+		#rmspropdict
+		rmsprop = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
 
 
 		# Create and compute solution of the scp
@@ -172,8 +176,9 @@ class IRLSolver:
 				diff_value += np.abs(rew_demo - rew_pol)
 				diff_value_dict[r_name] = rew_demo - rew_pol
 				print(rew_pol,rew_demo,r_name)
-
-
+				#incorporate rms prop to make sure that the gradients may not vary in magnitude
+				rmsprop[r_name]=0.9*rmsprop[r_name]+(1-0.9)*(diff_value_dict[r_name]**2)
+				print(rmsprop[r_name])
 			# Gradient step
 			step_size = gradientStepSize(i + 1, diff_value_dict)
 
@@ -181,9 +186,16 @@ class IRLSolver:
 			for r_name, gradVal in diff_value_dict.items():
 				# Gradient step update, scaled by the quadratic cost, and the magnitude of the feature
 				# new_weight[r_name] = weight[r_name] + self._options.rho * (gradVal/abs(featMatch[r_name]))  # Gradient step size ?
-				# new_weight[r_name] = weight[r_name] + self._options.rho_weight * diff_value * gradVal
-				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name]+rew_pol_dict[r_name])
+				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /((momentum[r_name]+1e-8)**0.5)
+
+				#this update is a way to "normalize" the features, the "rmsprop" part is related to RMSprop
+				new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal / ((abs(rew_pol_dict[r_name]))*(rmsprop[r_name] + 1e-8) ** 0.5)
+
+			# new_weight[r_name] = weight[r_name] + self._options.rho_weight * step_size * gradVal /abs(featMatch[r_name]+rew_pol_dict[r_name])
+				#featMatch[r_name]=0.99*featMatch[r_name]+0.01*rew_pol_dict[r_name]
 				#new_weight[r_name] = weight[r_name] + self._options.rho_weight * gradVal /abs(featMatch[r_name])
+				# momentum[r_name] = self._options.rho_weight * step_size * gradVal
+
 			if np.abs(diff_value) <= self._rew_eps:  # Check if the desired accuracy was attained
 				if self._options.verbose_weight:
 					print('---------------- Weight iteration {} -----------------'.format(i))
@@ -193,10 +205,10 @@ class IRLSolver:
 
 			# Update new weight
 			weight = new_weight
-
 			# Compute the new policy based on the obtained weight and previous trust region
-			pol, nu_s_a,trust_reg_val = self.compute_maxent_policy_via_scp(weight, init_problem=False,
-																		   featMatch=featMatching, initPolicy=pol,trust_prev=trust_reg_val)
+			pol, nu_s_a,trust_reg_opt = self.compute_maxent_policy_via_scp(weight, init_problem=False,
+																		   featMatch=featMatch, initPolicy=pol,trust_prev=trust_reg_val)
+			trust_reg_val=trust_reg_opt
 
 			# Do some printing
 			if self._options.verbose_weight:
@@ -398,6 +410,7 @@ class IRLSolver:
 				#just to prevent trust region from shrinking forever
 				if featMatch is not None:
 					trust_region = trustRegion['aug'](trust_region)
+
 
 				break
 		return policy_k, nu_s_a_k, trust_region
@@ -1041,7 +1054,8 @@ class IRLSolver:
 			spec_cost = sum(res_nu_s_spec[s] for s in self._pomdp.prob1A)
 
 		# Get the entropy cost -> Threshold for zero
-		ent_cost = sum(0 if res_nu_s[s] <= ZERO_NU_S else (-np.log(res_nu_s_a[s][a] / res_nu_s[s]) * res_nu_s_a[s][a]) \
+		ent_cost = sum(0 if res_nu_s_a[s][a] <= ZERO_NU_S
+					   else (-np.log(res_nu_s_a[s][a] / res_nu_s[s]) * res_nu_s_a[s][a]) \
 					   for s, actList in self._pomdp.states_act.items() \
 					   for a in actList
 					   )
