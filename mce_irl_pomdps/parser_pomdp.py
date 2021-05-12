@@ -525,6 +525,7 @@ class PrismModel(POMDP):
 								p=np.array([probA for a, probA in sigma[current_state].items()]))
 				seq_obs.append((obs, act))
 				# Update the reward function
+				#if firstDone:
 				acc_reward.append(sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items()))
 				# Update the state of the simulator
 				obs, reward = simulator.step(actList[act])
@@ -534,7 +535,12 @@ class PrismModel(POMDP):
 					if firstDone:
 						firstDone = False
 					else:
+
 						break
+			#append zeros to the reward after simulation is over
+			while len(acc_reward) < max_iter_per_run:
+				acc_reward.append(0.0)
+			#print(acc_reward,"after")
 			res_traj.append(seq_obs)
 			rew_list.append(acc_reward)
 			# print('---------------------------------------------------------')
