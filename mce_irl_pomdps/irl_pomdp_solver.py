@@ -14,14 +14,15 @@ ZERO_NU_S = 1e-8
 
 # Class for setting up options for the optimization problem
 class OptOptions:
-	def __init__(self, mu=1e4, mu_spec=1e4, rho=1, rho_weight=1.0, maxiter=100, maxiter_weight=20,
-				 graph_epsilon=1e-3, discount=0.9, verbose=True, verbose_weight=True):
+	def __init__(self, mu=1e4, mu_spec=1e4, rho=1, rho_weight=1.0, maxiter=100, max_update=None, 
+				maxiter_weight=20, graph_epsilon=1e-3, discount=0.9, verbose=True, verbose_weight=True):
 		"""
 		Returns the float representation for a constant value
 		:param mu: parameter for putting penalty on slack variables type: float
 		:param mu_spec : parameter for putting penalty on spec slac variables
 		:param rho : parameter for infeasbility of feature meatching constraint
 		:param maxiter: max number of iterations type: integer
+		:param max_update : Max number of correct updates in the SCP method
 		:param maxiter_weight : max number of iteration for finding the weight
 		:param graph_epsilon: the min probability of taking an action at each observation type: float
 		:param silent: print stuff from gurobi or not type: boolean
@@ -34,6 +35,10 @@ class OptOptions:
 		self.rho = rho
 		self.rho_weight = rho_weight
 		self.maxiter = maxiter
+		if max_update is None:
+			self.max_update = maxiter
+		else:
+			self.max_update = max_update
 		self.maxiter_weight = maxiter_weight
 		self.graph_epsilon = graph_epsilon
 		self.discount = discount
@@ -84,7 +89,7 @@ class IRLSolver:
 			while satisfying the specifications on the POMDP
 			:param weight : A dictionary with its keys being the reward feature name
 							and its value be a dictionary with (obs, act) as the key
-								and the associated reward at the value
+							and the associated reward at the value
 		"""
 		# Create the optimization problem
 		mOpt = gp.Model('Optimal Policy with NonConvex Gurobi Solver')
@@ -103,6 +108,7 @@ class IRLSolver:
 
 		# Build the objective function -> Negative expected reward
 		linExprCost = gp.LinExpr(self.compute_expected_reward(nu_s_a, weight))
+
 		# Add to the cost the penalization from the cost of staisfying the spec
 		if self._pomdp.has_sideinfo:
 			linExprCost.add(slack_spec, -self._options.mu_spec)
@@ -128,14 +134,13 @@ class IRLSolver:
 				'[Optimal policy : {}]'.format({o: {a: p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
 		return {o: {a: val.x for a, val in actList.items()} for o, actList in sigma.items()}
 
-	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=True):
+	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=False):
 		""" Solve the IRL problem given the feature matching expectation of the
 			sample trajectory
 			:param featMatch : feature counts from the expert
+			:includeQuadCost : Specify if adding a quadratic cost to penalize not matching the features function
 		"""
 		# Get the expected feature reward
-		#featMatch = self.compute_feature_from_trajectory(traj)
-		#featMatchdict=featMatch
 		featMatching = featMatch if includeQuadCost else None
 
 		# Dummy initialization of the weight
@@ -148,10 +153,9 @@ class IRLSolver:
 		#momentum
 		momentum = {r_name: 0.0 for r_name, rew in self._pomdp.reward_features.items()}
 
-
-		# Create and compute solution of the scp
-		pol, nu_s_a, _ = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching,trust_prev=None)
-
+		# Create and compute solution of the scp extra_args = (ent_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
+		pol, _, extra_args = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching, trust_prev=None)
+		nu_s_a = extra_args[2]
 		#set initial trust region for IRL part
 		trust_reg_val= self._trust_region
 
@@ -159,6 +163,7 @@ class IRLSolver:
 			# Store the difference between the expected feature by the policy and the matching feature
 			diff_value = 0
 			diff_value_dict = dict()
+
 			# Save the new weight
 			new_weight = dict()
 			step_size = gradientStepSize(i + 1, diff_value_dict)
@@ -174,6 +179,7 @@ class IRLSolver:
 							   for o, p in self._pomdp.obs_state_distr[s].items()
 							   ])
 				rew_pol_dict[r_name]=rew_pol
+
 				# Get the reward by the feature epectation
 				rew_demo = featMatch[r_name]
 
@@ -181,15 +187,18 @@ class IRLSolver:
 				diff_value += np.abs(rew_demo - rew_pol)
 				diff_value_dict[r_name] = rew_demo - rew_pol
 				print(rew_pol,rew_demo,r_name)
+
 				#incorporate rms prop to make sure that the gradients may not vary in magnitude
 				rmsprop[r_name]=0.9*rmsprop[r_name]+(1-0.9)*np.power(diff_value_dict[r_name],2)
 
 				momentum[r_name]=(0.0)*momentum[r_name]+(1-0.0)*(step_size/np.power(rmsprop[r_name] + 1e-8,0.5))*diff_value_dict[r_name]
 				#rmsprop[r_name]=0.9*rmsprop[r_name]+(0.1)*(diff_value_dict[r_name])
 
-				print(rmsprop[r_name])
+				# print(rmsprop[r_name])
+
 			# Gradient step
-			print(step_size)
+			# print(step_size)
+
 			# Update the weight values
 			for r_name, gradVal in diff_value_dict.items():
 				# Gradient step update, scaled by the quadratic cost, and the magnitude of the feature
@@ -213,9 +222,12 @@ class IRLSolver:
 
 			# Update new weight
 			weight = new_weight
+
 			# Compute the new policy based on the obtained weight and previous trust region
-			pol, nu_s_a,trust_reg_opt = self.compute_maxent_policy_via_scp(weight, init_problem=False,
-																		   featMatch=featMatch, initPolicy=pol,trust_prev=trust_reg_val)
+			pol, trust_reg_opt, extra_args = self.compute_maxent_policy_via_scp(weight, init_problem=False,
+												featMatch=featMatching, initPolicy=pol, 
+												trust_prev=trust_reg_val, init_visit=extra_args)
+			nu_s_a = extra_args[2]
 			trust_reg_val=trust_reg_opt
 
 			# Do some printing
@@ -243,7 +255,8 @@ class IRLSolver:
 
 		return featMatch
 
-	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None,trust_prev=None):
+	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None, 
+										trust_prev=None, init_visit=None):
 		""" Given the current weight for each feature functions in the POMDP model,
 			and the feature expected reward, compute the optimal policy
 			that maximizes the max causal entropy
@@ -251,7 +264,9 @@ class IRLSolver:
 			:init_problem : True If the optimization problem hasn't been initialize before
 			:featMatch : The vector of feature matching, if not given then
 						||(feat_match - expected reward)||^2 is not added to the cost function
+			:initPolicy : The starting policy of the scp method, uniform policy if None 
 			:trust_prev: current trust region from the previous IRL iteration
+			:init_visit : Store the associated nu_s, nu_s_a, ent_cost (entropy+spec sat) to initPolicy
 		"""
 		# Create the optimization problem
 		if init_problem:
@@ -305,12 +320,22 @@ class IRLSolver:
 		else:
 			policy_k = {o: {a: 1.0 / len(actList) for a in actList} for o, actList in self._pomdp.obs_act.items()}
 
-		# Initialize the state and state-action visitation count based on the policy
-		ent_cost, spec_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k = \
-			self.verify_solution(self.bellmanOpt, self.nu_s_ver, policy_k, self.bellConstr,
+		# If the initial state and action visitation count are not given
+		if init_visit is None:
+			# Initialize the state and state-action visitation count based on the policy
+			ent_cost, spec_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k = \
+				self.verify_solution(self.bellmanOpt, self.nu_s_ver, policy_k, self.bellConstr,
 								 nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
-		if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
-			ent_cost += (spec_cost - self._sat_thresh) * self._options.mu * self._options.mu_spec
+
+			if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
+				ent_cost += (spec_cost - self._sat_thresh) * self._options.mu * self._options.mu_spec
+		else:
+			assert initPolicy is not None
+			(ent_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k) = init_visit
+			spec_cost = -np.inf
+
+		# Store the current entropy + spec cost
+		latest_ent_spec = ent_cost
 
 		# Add the cost associated to the linear expected discounted reward given nu_s_a ( multiply back by mu)
 		ent_cost += sum(coeff * val * self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k, weight))
@@ -319,45 +344,50 @@ class IRLSolver:
 		if featMatch is not None:
 			ent_cost -= self.compute_quad_featmatch_value(nu_s_a_k, featMatch)*(self._options.rho/2)
 
-		if self._options.verbose:
-			print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
-			print("[Initialization] Number of steps : {}".format(sum(nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
+		# if self._options.verbose:
+		# 	print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
+		# 	print("[Initialization] Number of steps : {}".format(sum(nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 
 		# Initial trust region
 
 		# Get the total expected reward given theta (it is divided by self._options.mu)
 		linExprReward = self.compute_expected_reward(self.nu_s_a, weight)
+
 		# Get the cost term ||(feat_match- expected reward)||^2 if feat_match is given
 		quadExprReward = 0
 		if featMatch is not None:
 			quadExprReward = self.compute_quad_featmatch(self.nu_s_a, featMatch)*(self._options.rho/2)
 
-		for i in range(self._options.maxiter):
+		# A counter to count the correct updates
+		count_correct_update = 0
 
+		# Save if the past step was rejected
+		past_rejected = False
+
+		for i in range(self._options.maxiter):
 			# Update the set of linearized constraints
 			curr_time = time.time()
 			self.update_constr_and_trust_region(self.scpOpt, self.constrLin, self.constrLinSpec,
 												self.constrTrustReg, nu_s_k, nu_s_spec_k, policy_k,
-												self.nu_s, self.nu_s_spec, self.sigma, trust_region)
+												self.nu_s, self.nu_s_spec, self.sigma, 
+												trust_region, only_trust=past_rejected)
 
 			# Set the current objective based on past solution
-			penCostList = self.compute_entropy_cost(nu_s_k, nu_s_a_k, self.nu_s,
+			if not past_rejected:
+				penCostList = self.compute_entropy_cost(nu_s_k, nu_s_a_k, self.nu_s,
 													self.nu_s_a, self.slack_nu_p, self.slack_nu_n, self.slack_nu_p_spec,
 													self.slack_nu_n_spec, self.slack_spec)
-			# Something more efficient that adding the quadratic term like this-> TODO
-			self.scpOpt.setObjective(gp.LinExpr([*linExprReward, *penCostList]) - quadExprReward, gp.GRB.MAXIMIZE)
-			self.update_constraint_time += time.time() - curr_time
+				# Something more efficient that adding the quadratic term like this-> TODO
+				if featMatch is not None:
+					self.scpOpt.setObjective(gp.LinExpr([*linExprReward, *penCostList]) - quadExprReward, gp.GRB.MAXIMIZE)
+				else:
+					self.scpOpt.setObjective(gp.LinExpr([*linExprReward, *penCostList]), gp.GRB.MAXIMIZE)
 
+			self.update_constraint_time += time.time() - curr_time
+			
 			# Solve the optimization problem
 			curr_time = time.time()
 			self.scpOpt.optimize()
-			# if featMatch is not None:
-			#
-			#     val=self.compute_quad_featmatch_value(self.nu_s_a, featMatch)
-			obj = self.scpOpt.getObjective()
-			#print("opt problem val:",obj.getValue())
-			#print("trust region:",trust_region)
-
 			self.total_solve_time += time.time() - curr_time
 
 			next_policy = {o: {a: self.sigma[o][a].x for a in actList} for o, actList in self._pomdp.obs_act.items()}
@@ -371,6 +401,7 @@ class IRLSolver:
 
 			if self._pomdp.has_sideinfo and spec_cost_n - self._sat_thresh < -1e-6:  # The spec properties are not satisfied
 				ent_cost_n += (spec_cost_n - self._sat_thresh) * self._options.mu * self._options.mu_spec
+			latest_ent_spec_n = ent_cost_n
 			#print("true val from policy",ent_cost_n)
 
 			# Add the actual reward
@@ -388,21 +419,24 @@ class IRLSolver:
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
 				ent_cost, spec_cost = ent_cost_n, spec_cost_n
+				latest_ent_spec = latest_ent_spec_n
 				trust_region = trustRegion['aug'](trust_region)
-
-				#only update policy once per iteration during IRL
-				if featMatch is not None:
+				past_rejected = False
+				#only update policy within the max_updates
+				count_correct_update += 1
+				if count_correct_update >= self._options.max_update:
 					break
 
 			else:
 				trust_region = trustRegion['red'](trust_region)
+				past_rejected = True
 				if self._options.verbose:
 					print("[Iter {}: ----> Reject the current step]".format(i))
 
 			if self._options.verbose:
 				print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
 				print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
-				print("[Iter {}]: Entropy cost {}, Spec SAT : {}".format(i, ent_cost, spec_cost))
+				print("[Iter {}]: Entropy cost {}, Spec SAT : {}, Trust region : {}".format(i, ent_cost, spec_cost, trust_region))
 				if self._pomdp.has_sideinfo:
 					print("[Iter {}]: Number of steps : {}".format(i, sum(
 						nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
@@ -410,18 +444,17 @@ class IRLSolver:
 																								  self.update_constraint_time,
 																								  self.checking_policy_time,
 																								  self.total_solve_time))
-			print("[Iter {}]: Trust region : {}".format(i, trust_region))
+			# print("[Iter {}]: Trust region : {}".format(i, trust_region))
 
 			if trust_region < trustRegion['lim']:
 				if self._options.verbose:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
 				#just to prevent trust region from shrinking forever
-				if featMatch is not None:
-					trust_region = trustRegion['aug'](trust_region)
-
-
+				trust_region = self._trust_region
+				# trust_region = trustRegion['aug'](trust_region)
 				break
-		return policy_k, nu_s_a_k, trust_region
+
+		return policy_k, trust_region, (latest_ent_spec, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 
 	def from_reward_to_policy_via_scp(self, weight):
 		"""Given the weight for each feature functions in the POMDP model,
@@ -826,15 +859,16 @@ class IRLSolver:
 			:param slack_nu_p : (pos) slack variable to render the linear constraint feasible
 			:param slack_nu_n : (neg) slack variable to render the linear constraint feasible
 		"""
-		dictConstr = dict()
+		dictConstr = list()
 		for s, nu_s_v in nu_s.items():
 			obs_distr = self._pomdp.obs_state_distr[s]
 			for a, nu_s_a_val in nu_s_a[s].items():
 				val_expr = gp.LinExpr([*((1, sigma[o][a]) for o, p in obs_distr.items()), \
 									   (1, nu_s_v), (-1, nu_s_a_val), \
 									   (1, slack_nu_p[s][a]), (-1, slack_nu_n[s][a])])
-				dictConstr[(s, a)] = mOpt.addLConstr(val_expr, gp.GRB.EQUAL, 0,
-													 name='{}[{},{}]'.format(name, s, a))
+				dictConstr.append(((s, a), mOpt.addLConstr(val_expr, gp.GRB.EQUAL, 0,
+													 name='{}[{},{}]'.format(name, s, a)))
+								)
 		return dictConstr
 
 	def constr_trust_region(self, mOpt, sigma):
@@ -843,15 +877,17 @@ class IRLSolver:
 			:param mOpt : Gurobi model
 			:param sigma : observation based policy
 		"""
-		dictConstr = dict()
+		dictConstr = list()
 		for o, aDict in sigma.items():
 			for a, pol_val in aDict.items():
-				dictConstr[(o, a, True)] = mOpt.addLConstr(pol_val,
+				dictConstr.append(((o, a, True), mOpt.addLConstr(pol_val,
 														   gp.GRB.GREATER_EQUAL, 0,
-														   name='trust_inf[{},{}]'.format(o, a))
-				dictConstr[(o, a, False)] = mOpt.addLConstr(pol_val,
+														   name='trust_inf[{},{}]'.format(o, a)))
+								)
+				dictConstr.append(((o, a, False),mOpt.addLConstr(pol_val,
 															gp.GRB.LESS_EQUAL, 1.0,
 															name='trust_sup[{},{}]'.format(o, a))
+								))
 		return dictConstr
 
 	def compute_expected_reward(self, nu_s_a, theta):
@@ -923,19 +959,20 @@ class IRLSolver:
 		""" Update the constraints implied by the linearization of the bilinear constraint
 			around the solution of the past iterations
 		"""
-		for (s, a), constrV in constrLin.items():
+		for ((s, a), constrV) in constrLin:
+			curr_nu = nu_s_past[s]
 			obs_distr = self._pomdp.obs_state_distr[s]
 			prod_obs_prob_sigma_past = sum(p * sigma_past[o][a] for o, p in obs_distr.items())
-			constrV.RHS = nu_s_past[s] * prod_obs_prob_sigma_past
+			constrV.RHS = curr_nu * prod_obs_prob_sigma_past
 			# Update all the coefficients associated to sigma[o][a]
 			for o, p in obs_distr.items():
-				mOpt.chgCoeff(constrV, sigma[o][a], nu_s_past[s] * p)
+				mOpt.chgCoeff(constrV, sigma[o][a], curr_nu * p)
 			# Update the coefficient associated to nu_s[s]
 			mOpt.chgCoeff(constrV, nu_s[s], prod_obs_prob_sigma_past)
 
 	def update_constr_and_trust_region(self, mOpt, constrLin, constrLinSpec, constrTrust,
 									   nu_s_past, nu_s_past_spec, sigma_past,
-									   nu_s, nu_s_spec, sigma, currTrust):
+									   nu_s, nu_s_spec, sigma, currTrust, only_trust=False):
 		""" Update the constraint implied by the linearization of the bilinear constraint and
 			the trust region constraint using the solutions of the past iteration
 			:param mOpt : A gurobi model of the problem
@@ -951,9 +988,14 @@ class IRLSolver:
 			:currTrust : the current trust region
 		"""
 		# Start by updating the constraint by the trust region
-		for (o, a, tRhs), constrV in constrTrust.items():
+		inv_trust = 1.0 / currTrust
+		for ((o, a, tRhs), constrV) in constrTrust:
 			# tRhs is True correspons to lower bound of the trust region and inversely
-			constrV.RHS = sigma_past[o][a] * (1.0 / currTrust if tRhs else currTrust)
+			constrV.RHS = sigma_past[o][a] * ( inv_trust if tRhs else currTrust)
+
+		# If update only the trust region is allowed then return
+		if only_trust:
+			return
 
 		# Now update the constraints from the linearization
 		self.update_linearized_bil_sonstr(mOpt, constrLin, nu_s_past, sigma_past, nu_s, sigma)
@@ -977,24 +1019,27 @@ class IRLSolver:
 		if self._pomdp.has_sideinfo:  # Cost associated to violating the spec constraints
 			listCostTerm.append((-self._options.mu_spec, slack_spec))
 
-		for s, actionList in self._pomdp.states_act.items():
+		for s, nu_s_val in nu_s.items():
 			# Don't consider accepting states
 			if self._pomdp.has_sideinfo and (s in self._pomdp.prob1A or s in self._pomdp.prob0E):
 				continue
-
-			for a in actionList:
+			nu_s_past_val, nu_s_a_past_sval, slack_nu_p_sval, slack_nu_n_sval = nu_s_past[s], nu_s_a_past[s], slack_nu_p[s], slack_nu_n[s]
+			if self._pomdp.has_sideinfo:
+				slack_nu_p_spec_sval, slack_nu_n_spec_sval = slack_nu_p_spec[s], slack_nu_n_spec[s]
+			for a, nu_s_a_val in nu_s_a[s].items():
+				nu_s_a_past_saval = nu_s_a_past_sval[a]
 				# First, add the entropy terms
-				if nu_s_past[s] > 0 and nu_s_a_past[s][a] > 0 and addEntropy:
-					nu_ratio = nu_s_a_past[s][a] / nu_s_past[s]
-					listCostTerm.append((nu_ratio / self._options.mu, nu_s[s]))
-					listCostTerm.append((-(np.log(nu_ratio) + 1) / self._options.mu, nu_s_a[s][a]))
+				if nu_s_past_val > 0 and nu_s_a_past_saval > 0 and addEntropy:
+					nu_ratio = nu_s_a_past_saval / nu_s_past_val
+					listCostTerm.append((nu_ratio / self._options.mu, nu_s_val))
+					listCostTerm.append((-(np.log(nu_ratio) + 1) / self._options.mu, nu_s_a_val))
 
 				# Then add the cost associated to the linearization errors
-				listCostTerm.append((-1, slack_nu_p[s][a]))
-				listCostTerm.append((-1, slack_nu_n[s][a]))
+				listCostTerm.append((-1, slack_nu_p_sval[a]))
+				listCostTerm.append((-1, slack_nu_n_sval[a]))
 				if self._pomdp.has_sideinfo:
-					listCostTerm.append((-1, slack_nu_p_spec[s][a]))
-					listCostTerm.append((-1, slack_nu_n_spec[s][a]))
+					listCostTerm.append((-1, slack_nu_p_spec_sval[a]))
+					listCostTerm.append((-1, slack_nu_n_spec_sval[a]))
 
 		return listCostTerm
 
@@ -1025,7 +1070,7 @@ class IRLSolver:
 			:param constrBellman : constraint representing the bellman equation
 		"""
 		# Update the optimization problem with the given policy
-		for s, nu_s_val in nu_s.items():
+		for s in nu_s:
 			dicCoeff = self.extract_varcoeff_from_bellman(s, policy_val, gamma=self._options.discount)
 			for pred_s, coeffV in dicCoeff.items():
 				sum_coeff = sum(coeffV)
@@ -1061,11 +1106,11 @@ class IRLSolver:
 		if self._pomdp.has_sideinfo:
 			spec_cost = sum(res_nu_s_spec[s] for s in self._pomdp.prob1A)
 
-		# Get the entropy cost -> Threshold for zero
-		ent_cost = sum(0 if res_nu_s_a[s][a] <= ZERO_NU_S
-					   else (-np.log(res_nu_s_a[s][a] / res_nu_s[s]) * res_nu_s_a[s][a]) \
-					   for s, actList in self._pomdp.states_act.items() \
-					   for a in actList
+		# ent_cost = sum(0 if (res_nu_s_a_val <= ZERO_NU_S or res_nu_s_val <= ZERO_NU_S)
+		ent_cost = sum(0 if (res_nu_s_a_val <= ZERO_NU_S or res_nu_s_val <= ZERO_NU_S)
+					   else (-np.log(res_nu_s_a_val / res_nu_s_val) * res_nu_s_a_val) \
+					   for s, res_nu_s_val in res_nu_s.items()\
+					   for a, res_nu_s_a_val in res_nu_s_a[s].items()
 					   )
 		return ent_cost, spec_cost, res_nu_s, res_nu_s_a, res_nu_s_spec, res_nu_s_a_spec
 
