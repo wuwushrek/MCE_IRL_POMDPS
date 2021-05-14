@@ -170,7 +170,9 @@ class POMDP(ABC):
 class PrismModel(POMDP):
 	""" Instantiate a POMDP model written in the prism format
 	"""
-	def __init__(self, path_prism, formulas=[], memory_len=1, export=True, savePomdp=True):
+	def __init__(self, path_prism, formulas=[], memory_len=1, 
+					counter_type= stormpy.pomdp.PomdpMemoryPattern.selective_counter,
+					export=True, savePomdp=True):
 		""" Parse the prism file to build the POMDP model, then
 			compute the DTMC induced by the given formula to obtain both
 			the set of states that guarantees the satisfaction of the
@@ -179,6 +181,14 @@ class PrismModel(POMDP):
 			:param formulas : A list of string representing formulas to satisfied
 				Each formula should be probabilistic path formula representing either 
 				Always, Eventually, or Until 
+			:param memory_len : The memmory of the FSC controller
+			:param counter_type : The type of the memory counter,
+									stormpy.pomdp.PomdpMemoryPattern.selective_counter
+									stormpy.pomdp.PomdpMemoryPattern.fixed_counter
+									stormpy.pomdp.PomdpMemoryPattern.selective_ring
+									stormpy.pomdp.PomdpMemoryPattern.fixed_ring
+									stormpy.pomdp.PomdpMemoryPattern.full
+									stormpy.pomdp.PomdpMemoryPattern.trivial
 			:param export : True if enable exporting the built POMDP and the PMC
 			:param savePomdp : True if the class should keep track of the prism POMDP instance
 		"""
@@ -188,6 +198,7 @@ class PrismModel(POMDP):
 		self._formulas = formulas
 		self._export = export
 		self.memory_len = memory_len
+		self.counter_type = counter_type
 
 		# Variable saving if side info was given or not
 		self._has_sideinfo = (len(self._formulas) > 0)
@@ -385,8 +396,8 @@ class PrismModel(POMDP):
 
 		# Construct the memory for the FSC
 		memory_builder = stormpy.pomdp.PomdpMemoryBuilder()
-		memory = memory_builder.build(stormpy.pomdp.PomdpMemoryPattern.selective_counter, self.memory_len)
-		
+		# memory = memory_builder.build(stormpy.pomdp.PomdpMemoryPattern.fixed_counter, self.memory_len)
+		memory = memory_builder.build(self.counter_type, self.memory_len)
 		# apply the memory onto the POMDP to get the cartesian product
 		pomdp = stormpy.pomdp.unfold_memory(pomdp , memory, add_memory_labels=True, keep_state_valuations=True)
 

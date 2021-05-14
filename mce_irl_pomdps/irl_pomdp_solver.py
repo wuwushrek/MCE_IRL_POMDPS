@@ -15,7 +15,8 @@ ZERO_NU_S = 1e-8
 # Class for setting up options for the optimization problem
 class OptOptions:
 	def __init__(self, mu=1e4, mu_spec=1e4, rho=1, rho_weight=1.0, maxiter=100, max_update=None, 
-				maxiter_weight=20, graph_epsilon=1e-3, discount=0.9, verbose=True, verbose_weight=True):
+				maxiter_weight=20, graph_epsilon=1e-3, discount=0.9, 
+				verbose=True, verbose_weight=True, verbose_solver=None):
 		"""
 		Returns the float representation for a constant value
 		:param mu: parameter for putting penalty on slack variables type: float
@@ -44,6 +45,7 @@ class OptOptions:
 		self.discount = discount
 		self.verbose = verbose
 		self.verbose_weight = verbose_weight
+		self.verbose_solver = self.verbose if verbose_solver is None else verbose_solver
 		if graph_epsilon < 0:
 			raise RuntimeError("graph epsilon should be larger than 0")
 		if discount < 0 or discount >= 1:
@@ -66,6 +68,7 @@ class IRLSolver:
 			pomdp: POMDP,
 			sat_thresh: float = 0.95,
 			init_trust_region: float = trustRegion['aug'](4),
+			max_trust_region: float = 4,
 			rew_eps: float = 1e-6,
 			options: OptOptions = OptOptions(),
 	) -> None:
@@ -78,6 +81,7 @@ class IRLSolver:
 
 		# Save the initial trust region
 		self._trust_region = init_trust_region
+		self._max_trust_region = max_trust_region
 		self._sat_thresh = sat_thresh
 		self._options = options
 		self._rew_eps = rew_eps
@@ -99,7 +103,7 @@ class IRLSolver:
 			self.init_optimization_problem(mOpt, noLinearization=True)
 
 		# Define the parameters used by Gurobi for this problem
-		mOpt.Params.OutputFlag = self._options.verbose
+		mOpt.Params.OutputFlag = self._options.verbose_solver
 		mOpt.Params.Presolve = 2  # More aggressive presolve step
 		mOpt.Params.FeasibilityTol = 1e-6
 		mOpt.Params.OptimalityTol = 1e-6
@@ -130,8 +134,7 @@ class IRLSolver:
 				print('[Satisfaction of the formula = {}]'.format(sum(nu_s_spec[s].x for s in self._pomdp.prob1A)))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
 				print('[Number of steps : {}]'.format(sum(nu_s_val.x for s, nu_s_val in nu_s_spec.items())))
-			print(
-				'[Optimal policy : {}]'.format({o: {a: p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
+			# print('[Optimal policy : {}]'.format({o: {a: p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
 		return {o: {a: val.x for a, val in actList.items()} for o, actList in sigma.items()}
 
 	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=False):
@@ -156,6 +159,7 @@ class IRLSolver:
 		# Create and compute solution of the scp extra_args = (ent_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 		pol, _, extra_args = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching, trust_prev=None)
 		nu_s_a = extra_args[2]
+
 		#set initial trust region for IRL part
 		trust_reg_val= self._trust_region
 
@@ -168,7 +172,9 @@ class IRLSolver:
 			new_weight = dict()
 			step_size = gradientStepSize(i + 1, diff_value_dict)
 
-			print("---------------- Printing visitation counts---------------- ")
+			if self._options.verbose_weight:
+				print("---------------- Printing visitation iteration {} ---------------- ".format(i))
+			
 			for r_name, val in weight.items():
 				rew = self._pomdp.reward_features[r_name]
 
@@ -186,7 +192,6 @@ class IRLSolver:
 				# Save the sum of the difference to detect convergence
 				diff_value += np.abs(rew_demo - rew_pol)
 				diff_value_dict[r_name] = rew_demo - rew_pol
-				print(rew_pol,rew_demo,r_name)
 
 				#incorporate rms prop to make sure that the gradients may not vary in magnitude
 				rmsprop[r_name]=0.9*rmsprop[r_name]+(1-0.9)*np.power(diff_value_dict[r_name],2)
@@ -194,10 +199,8 @@ class IRLSolver:
 				momentum[r_name]=(0.0)*momentum[r_name]+(1-0.0)*(step_size/np.power(rmsprop[r_name] + 1e-8,0.5))*diff_value_dict[r_name]
 				#rmsprop[r_name]=0.9*rmsprop[r_name]+(0.1)*(diff_value_dict[r_name])
 
-				# print(rmsprop[r_name])
-
-			# Gradient step
-			# print(step_size)
+				if self._options.verbose_weight:
+					print(rew_pol,rew_demo,r_name, 'rmsprop: ', rmsprop[r_name])
 
 			# Update the weight values
 			for r_name, gradVal in diff_value_dict.items():
@@ -215,7 +218,7 @@ class IRLSolver:
 
 			if np.abs(diff_value) <= self._rew_eps:  # Check if the desired accuracy was attained
 				if self._options.verbose_weight:
-					print('---------------- Weight iteration {} -----------------'.format(i))
+					# print('---------------- Weight iteration {} -----------------'.format(i))
 					print('[Diff with feature matching] : {} ]'.format(diff_value))
 					print('[Weight value] : {} ]'.format(weight))
 				break
@@ -232,7 +235,7 @@ class IRLSolver:
 
 			# Do some printing
 			if self._options.verbose_weight:
-				print('---------------- Weight iteration {} -----------------'.format(i))
+				# print('---------------- Weight iteration {} -----------------'.format(i))
 				print('[Diff with feature matching] : {} ]'.format(diff_value))
 				print('[New weight value] : {} ]'.format(weight))
 				print("Update time : {}s, Checking time : {}s, Solve time: {}s".format(
@@ -255,8 +258,8 @@ class IRLSolver:
 
 		return featMatch
 
-	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, initPolicy=None, 
-										trust_prev=None, init_visit=None):
+	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, 
+										initPolicy=None, trust_prev=None, init_visit=None):
 		""" Given the current weight for each feature functions in the POMDP model,
 			and the feature expected reward, compute the optimal policy
 			that maximizes the max causal entropy
@@ -282,10 +285,12 @@ class IRLSolver:
 			self.nu_s_ver, self.nu_s_ver_spec, self.bellConstr, self.bellConstrDict = \
 				self.init_optimization_problem(self.scpOpt,
 											   noLinearization=False, checkOpt=self.bellmanOpt)
-			print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
+
+			if self._options.verbose:
+				print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 
 			# Define the parameters used by Gurobi for the linearized problem
-			self.scpOpt.Params.OutputFlag = self._options.verbose
+			self.scpOpt.Params.OutputFlag = self._options.verbose_solver
 			self.scpOpt.Params.Presolve = 2  # More aggressive presolve step
 			# self._encoding.Params.Method = 2 # The problem is not really a QP
 			self.scpOpt.Params.Crossover = 0
@@ -293,20 +298,21 @@ class IRLSolver:
 			self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
 			self.scpOpt.Params.BarHomogeneous = 1  # No need for, our problem is always feasible/bound
 			# self._encoding.Params.ScaleFlag = 3
-			self.scpOpt.Params.FeasibilityTol = 1e-6
-			self.scpOpt.Params.OptimalityTol = 1e-6
-			self.scpOpt.Params.BarConvTol = 1e-6
+			# self.scpOpt.Params.FeasibilityTol = 1e-6
+			# self.scpOpt.Params.OptimalityTol = 1e-6
+			# self.scpOpt.Params.BarConvTol = 1e-6
 
 			# Define the parameters used by Gurobi for the auxialiry program
-			self.bellmanOpt.Params.OutputFlag = self._options.verbose
+			self.bellmanOpt.Params.OutputFlag = self._options.verbose_solver
+			self.bellmanOpt.Params.Presolve = 2 
 			self.bellmanOpt.Params.Crossover = 0
 			self.bellmanOpt.Params.CrossoverBasis = 0
 			self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
 			self.bellmanOpt.Params.BarHomogeneous = 1
 			# self._encoding.Params.ScaleFlag = 3
-			self.bellmanOpt.Params.FeasibilityTol = 1e-6
-			self.bellmanOpt.Params.OptimalityTol = 1e-6
-			self.bellmanOpt.Params.BarConvTol = 1e-6
+			# self.bellmanOpt.Params.FeasibilityTol = 1e-6
+			# self.bellmanOpt.Params.OptimalityTol = 1e-6
+			# self.bellmanOpt.Params.BarConvTol = 1e-6
 
 		trust_region = self._trust_region
 
@@ -348,8 +354,6 @@ class IRLSolver:
 		# 	print("[Initialization] Entropy cost {}, Spec SAT : {}".format(ent_cost, spec_cost))
 		# 	print("[Initialization] Number of steps : {}".format(sum(nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
 
-		# Initial trust region
-
 		# Get the total expected reward given theta (it is divided by self._options.mu)
 		linExprReward = self.compute_expected_reward(self.nu_s_a, weight)
 
@@ -377,8 +381,8 @@ class IRLSolver:
 				penCostList = self.compute_entropy_cost(nu_s_k, nu_s_a_k, self.nu_s,
 													self.nu_s_a, self.slack_nu_p, self.slack_nu_n, self.slack_nu_p_spec,
 													self.slack_nu_n_spec, self.slack_spec)
-				# Something more efficient that adding the quadratic term like this-> TODO
 				if featMatch is not None:
+					# Something more efficient than adding the quadratic term like this-> TODO
 					self.scpOpt.setObjective(gp.LinExpr([*linExprReward, *penCostList]) - quadExprReward, gp.GRB.MAXIMIZE)
 				else:
 					self.scpOpt.setObjective(gp.LinExpr([*linExprReward, *penCostList]), gp.GRB.MAXIMIZE)
@@ -402,13 +406,10 @@ class IRLSolver:
 			if self._pomdp.has_sideinfo and spec_cost_n - self._sat_thresh < -1e-6:  # The spec properties are not satisfied
 				ent_cost_n += (spec_cost_n - self._sat_thresh) * self._options.mu * self._options.mu_spec
 			latest_ent_spec_n = ent_cost_n
-			#print("true val from policy",ent_cost_n)
 
 			# Add the actual reward
 			ent_cost_n += sum(
 				coeff * val * self._options.mu for coeff, val in self.compute_expected_reward(nu_s_a_k_n, weight))
-			# Add ||(feat_match- expected reward)||^2 if feat_match is given
-			#print("true val from policy",ent_cost_n)
 
 			if featMatch is not None:
 				ent_cost_n -= self.compute_quad_featmatch_value(nu_s_a_k_n, featMatch) * (self._options.rho/2)
@@ -420,8 +421,9 @@ class IRLSolver:
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
 				ent_cost, spec_cost = ent_cost_n, spec_cost_n
 				latest_ent_spec = latest_ent_spec_n
-				trust_region = trustRegion['aug'](trust_region)
+				trust_region = np.minimum(trustRegion['aug'](trust_region), self._max_trust_region)
 				past_rejected = False
+
 				#only update policy within the max_updates
 				count_correct_update += 1
 				if count_correct_update >= self._options.max_update:
@@ -434,8 +436,8 @@ class IRLSolver:
 					print("[Iter {}: ----> Reject the current step]".format(i))
 
 			if self._options.verbose:
-				print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
-				print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
+				# print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
+				# print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
 				print("[Iter {}]: Entropy cost {}, Spec SAT : {}, Trust region : {}".format(i, ent_cost, spec_cost, trust_region))
 				if self._pomdp.has_sideinfo:
 					print("[Iter {}]: Number of steps : {}".format(i, sum(
@@ -444,7 +446,6 @@ class IRLSolver:
 																								  self.update_constraint_time,
 																								  self.checking_policy_time,
 																								  self.total_solve_time))
-			# print("[Iter {}]: Trust region : {}".format(i, trust_region))
 
 			if trust_region < trustRegion['lim']:
 				if self._options.verbose:
@@ -478,31 +479,33 @@ class IRLSolver:
 		self.nu_s_ver, self.nu_s_ver_spec, self.bellConstr, self.bellConstrDict = \
 			self.init_optimization_problem(self.scpOpt,
 										   noLinearization=False, checkOpt=self.bellmanOpt)
-		print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
+		
+		if self._options.verbose:
+			print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 
 		# Define the parameters used by Gurobi for the linearized problem
-		self.scpOpt.Params.OutputFlag = self._options.verbose
+		self.scpOpt.Params.OutputFlag = self._options.verbose_solver
 		self.scpOpt.Params.Presolve = 2  # More aggressive presolve step
 		# self._encoding.Params.Method = 2 # The problem is not really a QP
 		self.scpOpt.Params.Crossover = 0
 		self.scpOpt.Params.CrossoverBasis = 0
 		self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
 		self.scpOpt.Params.BarHomogeneous = 1  # No need for, our problem is always feasible/bound
-		# self._encoding.Params.ScaleFlag = 3
-		self.scpOpt.Params.FeasibilityTol = 1e-6
-		self.scpOpt.Params.OptimalityTol = 1e-6
-		self.scpOpt.Params.BarConvTol = 1e-6
+		# self.scpOpt.Params.ScaleFlag = 3
+		# self.scpOpt.Params.FeasibilityTol = 1e-6
+		# self.scpOpt.Params.OptimalityTol = 1e-6
+		# self.scpOpt.Params.BarConvTol = 1e-6
 
 		# Define the parameters used by Gurobi for the auxialiry program
-		self.bellmanOpt.Params.OutputFlag = self._options.verbose
+		self.bellmanOpt.Params.OutputFlag = self._options.verbose_solver
 		self.bellmanOpt.Params.Crossover = 0
 		self.bellmanOpt.Params.CrossoverBasis = 0
 		self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
 		self.bellmanOpt.Params.BarHomogeneous = 1
 		# self._encoding.Params.ScaleFlag = 3
-		self.bellmanOpt.Params.FeasibilityTol = 1e-6
-		self.bellmanOpt.Params.OptimalityTol = 1e-6
-		self.bellmanOpt.Params.BarConvTol = 1e-6
+		# self.bellmanOpt.Params.FeasibilityTol = 1e-6
+		# self.bellmanOpt.Params.OptimalityTol = 1e-6
+		# self.bellmanOpt.Params.BarConvTol = 1e-6
 
 		# Initialize policy at iteration k
 		policy_k = {o: {a: 1.0 / len(actList) for a in actList} for o, actList in self._pomdp.obs_act.items()}
@@ -511,6 +514,7 @@ class IRLSolver:
 		ent_cost, spec_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k = \
 			self.verify_solution(self.bellmanOpt, self.nu_s_ver, policy_k, self.bellConstr,
 								 nu_s_spec=self.nu_s_ver_spec, constrBellmanSpec=self.bellConstrDict)
+		
 		ent_cost = 0  # No need for entropy here
 		if self._pomdp.has_sideinfo and spec_cost < self._sat_thresh:
 			ent_cost += (spec_cost - self._sat_thresh) * self._options.mu * self._options.mu_spec
@@ -546,7 +550,7 @@ class IRLSolver:
 			curr_time = time.time()
 			self.scpOpt.optimize()
 			self.total_solve_time += time.time() - curr_time
-			print(trust_region,"trust_region")
+
 			next_policy = {o: {a: self.sigma[o][a].x for a in actList} for o, actList in self._pomdp.obs_act.items()}
 
 			curr_time = time.time()
@@ -569,16 +573,16 @@ class IRLSolver:
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
 				ent_cost, spec_cost = ent_cost_n, spec_cost_n
-				trust_region = trustRegion['aug'](trust_region)
+				trust_region = np.minimum(trustRegion['aug'](trust_region), self._max_trust_region)
 			else:
 				trust_region = trustRegion['red'](trust_region)
 				if self._options.verbose:
 					print("[Iter {}: ----> Reject the current step]".format(i))
 
 			if self._options.verbose:
-				print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
-				print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
-				print("[Iter {}]: Reward attained {}, Spec SAT : {}".format(i, curr_rew, spec_cost))
+				# print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
+				# print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
+				print("[Iter {}]: Reward attained {}, Spec SAT : {}, Trust region : {}".format(i, curr_rew, spec_cost, trust_region))
 				if self._pomdp.has_sideinfo:
 					print("[Iter {}]: Number of steps : {}".format(i, sum(
 						nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
@@ -586,9 +590,8 @@ class IRLSolver:
 																								  self.update_constraint_time,
 																								  self.checking_policy_time,
 																								  self.total_solve_time))
-				print("[Iter {}]: Trust region : {}".format(i, trust_region))
+				# print("[Iter {}]: Trust region : {}".format(i, trust_region))
 			if trust_region < trustRegion['lim']:
-
 				if self._options.verbose:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
 				break
@@ -641,11 +644,11 @@ class IRLSolver:
 		self.init_encoding_time += time.time() - curr_time
 
 		# Define the parameters used by Gurobi for this problem
-		mOpt.Params.OutputFlag = self._options.verbose
+		mOpt.Params.OutputFlag = self._options.verbose_solver
 		mOpt.Params.Presolve = 2  # More aggressive presolve step
-		mOpt.Params.FeasibilityTol = 1e-8
-		mOpt.Params.OptimalityTol = 1e-6
-		mOpt.Params.BarConvTol = 1e-6
+		# mOpt.Params.FeasibilityTol = 1e-8
+		# mOpt.Params.OptimalityTol = 1e-6
+		# mOpt.Params.BarConvTol = 1e-6
 
 		# Build the objective function -> Negative expected reward
 		linExprCost = gp.LinExpr(self.compute_expected_reward(nu_s_a, weight))
@@ -670,9 +673,9 @@ class IRLSolver:
 				print('[Satisfaction of the formula = {}]'.format(sum(nu_s[s].x for s in self._pomdp.prob1A)))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
 				print('[Number of steps : {}]'.format(sum(nu_s_val.x for s, nu_s_val in nu_s.items())))
-			print('[Optimal policy : {}]'.format(
-				{s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()}
-				 for s, actVal in nu_s_a.items()}))
+			# print('[Optimal policy : {}]'.format(
+			# 	{s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()}
+			# 	 for s, actVal in nu_s_a.items()}))
 		return {s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()} for
 				s, actVal in nu_s_a.items()}
 
