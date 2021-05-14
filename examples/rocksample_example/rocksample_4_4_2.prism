@@ -47,12 +47,14 @@ observable "seegood" = good;
 // Observe when the distance to a rock is zero and where at 1 cell away from a rock
 observable "atr1" = r1dist <= 0;
 observable "atr2" = r2dist <= 0;
-observable "nearr1" = r1dist <= 1;
-observable "nearr2" = r2dist <= 1;
+// observable "nearr1" = r1dist <= 1;
+// observable "nearr2" = r2dist <= 1;
 
 // Compute distance to the rocks
-formula normdistr1 = (r1dist <= 1) ? 1 : 2; //min(1+((r1dist-1)/maxdist),1.0);
-formula normdistr2 = (r2dist <= 1) ? 1 : 2; //min(1+((r2dist-1)/maxdist),1.0);
+// formula normdistr1 = (r1dist <= 1) ? 1 : 2; 
+formula normdistr1 = 1/(1 - 0.7*(r1dist/maxdist));
+// formula normdistr2 = (r2dist <= 1) ? 1 : 2; 
+formula normdistr2 = 1/(1 - 0.7*(r2dist/maxdist));
 
 module master
     started : bool init false;
