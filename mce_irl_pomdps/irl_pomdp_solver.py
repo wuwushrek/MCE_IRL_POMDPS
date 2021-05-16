@@ -200,7 +200,7 @@ class IRLSolver:
 				#rmsprop[r_name]=0.9*rmsprop[r_name]+(0.1)*(diff_value_dict[r_name])
 
 				if self._options.verbose_weight:
-					print(rew_pol,rew_demo,r_name, 'rmsprop: ', rmsprop[r_name])
+					print(rew_pol,rew_demo,r_name, '| rmsprop: ', rmsprop[r_name])
 
 			# Update the weight values
 			for r_name, gradVal in diff_value_dict.items():
@@ -338,7 +338,7 @@ class IRLSolver:
 		else:
 			assert initPolicy is not None
 			(ent_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k) = init_visit
-			spec_cost = -np.inf
+			spec_cost = sum(nu_s_spec_k[s] for s in self._pomdp.prob1A) if self._pomdp.has_sideinfo else 0
 
 		# Store the current entropy + spec cost
 		latest_ent_spec = ent_cost
@@ -455,6 +455,10 @@ class IRLSolver:
 				# trust_region = trustRegion['aug'](trust_region)
 				break
 
+		if self._options.verbose_weight:
+			print("[No Iter {}]: Entropy + spec {}, Reward {}, Spec SAT : {}, Trust region : {}".format(i, 
+					latest_ent_spec, ent_cost-latest_ent_spec, spec_cost, trust_region))
+
 		return policy_k, trust_region, (latest_ent_spec, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 
 	def from_reward_to_policy_via_scp(self, weight):
@@ -463,7 +467,7 @@ class IRLSolver:
 			while satisfying the specifications
 			:param weight : A dictionary with its keys being the reward feature name
 							and its value be a dictionary with (obs, act) as the key
-								and the associated reward at the value
+							and the associated reward at the value
 		"""
 		# Create the optimization problem
 

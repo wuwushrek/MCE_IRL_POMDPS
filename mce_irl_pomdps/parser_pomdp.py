@@ -385,6 +385,7 @@ class PrismModel(POMDP):
 
 		# Build the pomdp model with all the parsed properties
 		pomdp_t = stormpy.build_sparse_model_with_options(prism_program, options)
+		# print(pomdp_t)
 
 		# Make its representation canonic to obtain later the pMC
 		pomdp = stormpy.pomdp.make_canonic(pomdp_t)
