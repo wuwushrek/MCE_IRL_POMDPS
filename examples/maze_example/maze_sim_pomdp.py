@@ -93,11 +93,11 @@ irl_solver.ZERO_NU_S = 1e-8
 
 # Parameter for the optimization\
 pomdp_r._has_sideinfo = False
-irl_solver.gradientStepSize = lambda iterVal, diffFeat : 0.1  # /np.power(iterVal+1, 0.5)
+irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, max_update= 5, 
-                                    maxiter_weight=300, rho_weight= 1,
+                                    maxiter_weight=500, rho_weight= 1,
                                     graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb1 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+irlPb1 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
@@ -109,9 +109,9 @@ weight_pomdp_30, pol_pomdp_30 = irlPb1.solve_irl_pomdp_given_traj(features_traj_
 pomdp_r._has_sideinfo = True
 # irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0  # /np.power(iterVal+1, 0.5)
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, max_update= 5, 
-                      maxiter_weight=300, rho_weight= 1,
+                      maxiter_weight=500, rho_weight= 1,
                       graph_epsilon=0, discount=0.999, verbose=False, verbose_weight=True)
-irlPb2 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0.8, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+irlPb2 = irl_solver.IRLSolver(pomdp_r, sat_thresh=0.8, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_si, pol_pomdp_30_si = irlPb2.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
@@ -139,9 +139,9 @@ irl_solver.ZERO_NU_S = 1e-8
 pomdp_r_mem._has_sideinfo = False
 # irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0  # /np.power(iterVal+1, 0.5)
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, max_update= 5, 
-                      maxiter_weight=300, rho_weight= 1,
+                      maxiter_weight=500, rho_weight= 1,
                       graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
-irlPb1_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+irlPb1_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_3mem, pol_pomdp_30_3mem = irlPb1_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 
@@ -154,9 +154,9 @@ print(features_traj_pomdp_30)
 pomdp_r_mem._has_sideinfo = True
 # irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1.0  # /np.power(iterVal+1, 0.5)
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e4, maxiter=100, max_update= 5,
-                      maxiter_weight=300, rho_weight= 1,
+                      maxiter_weight=500, rho_weight= 1,
                       graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
-irlPb2_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0.8, init_trust_region=1.5, rew_eps=1e-4, options=options_opt)
+irlPb2_mem = irl_solver.IRLSolver(pomdp_r_mem, sat_thresh=0.8, init_trust_region=1.1, rew_eps=1e-4, options=options_opt)
 features_traj_pomdp_30=irlPb_nosi.compute_feature_from_trajectory(traj_pomdp_30)
 weight_pomdp_30_si_3mem, pol_pomdp_30_si_3mem = irlPb2_mem.solve_irl_pomdp_given_traj(features_traj_pomdp_30)
 

@@ -51,10 +51,10 @@ observable "atr2" = r2dist <= 0;
 // observable "nearr2" = r2dist <= 1;
 
 // Compute distance to the rocks
-// formula normdistr1 = (r1dist <= 1) ? 1 : 2; 
-formula normdistr1 = 1/(1 - 0.7*(r1dist/maxdist));
-// formula normdistr2 = (r2dist <= 1) ? 1 : 2; 
-formula normdistr2 = 1/(1 - 0.7*(r2dist/maxdist));
+formula normdistr1 = (r1dist <= 1) ? 1 : 2; 
+// formula normdistr1 = 1/(1 - 0.7*(r1dist/maxdist));
+formula normdistr2 = (r2dist <= 1) ? 1 : 2; 
+// formula normdistr2 = 1/(1 - 0.7*(r2dist/maxdist));
 
 module master
     started : bool init false;
@@ -65,7 +65,7 @@ module master
     [south] started  & !done -> true;
     [east] started  & !done-> true;
     [west] started & !done -> true;
-    [finish] !done & finish -> (done'=true);
+    [finish] finish -> (done'=true);
 endmodule
 
 module rock1
@@ -106,19 +106,23 @@ module robot
     [north]  started & !done -> (1-slippery): (y'=max(y-1,yMIN)) + slippery: (y'=max(y-2,yMIN));
 endmodule
 
-// First reward feature -> Time spent moving in  the environment
+// First reward feature -> Time spent picking an action
 rewards "total_time"
     [west] true : -1;
     [east] true : -1;
     [north] true : -1;
     [south] true : -1;
+    // [r1sense] true : -1;
+    // [r2sense] true : -1;
+    // [r1sample] true : -2;
+    // [r2sample] true : -2;
     // [placement] true : -1;
 endrewards
 
 // Second reward feature -> Cost of sensing/sampling
 rewards "sense_time"
-    [r1sample] true : -1;
-    [r2sample] true : -1;
+    [r1sample] true : -2;
+    [r2sample] true : -2;
     [r1sense] true : -1;
     [r2sense] true : -1;
 endrewards
@@ -129,23 +133,27 @@ rewards "finish_grock"
 endrewards
 
 // Fourth reward feature -> Reaching the finish
-rewards "finish"
-    [finish] true : 1;
-endrewards
+// rewards "finish"
+//    [finish] finish & !done : 1;
+// endrewards
+
 
 // Third reward feature ->  Penalize going to bad rocks
-rewards "bad_rock"
-    [west] bad : -1;
-    [east] bad : -1;
-    [north] bad : -1;
-    [south] bad : -1;
-    [r1sample] bad : -1;
-    [r2sample] bad : -1;
-    [r1sense] bad : -1;
-    [r2sense] bad : -1;
-endrewards
+// rewards "bad_rock"
+//    [west] bad : -1;
+//    [east] bad : -1;
+//    [north] bad : -1;
+//    [south] bad : -1;
+//    [r1sample] bad : -1;
+//    [r2sample] bad : -1;
+//    [r1sense] bad : -1;
+//    [r2sense] bad : -1;
+// endrewards
 
 
-label "goal" = good;
-label "rockposition" = (!r1taken & r1x = x & r1y = y) | (!r2taken & r2x = x & r2y = y);
-label "notbad" = !bad;
+label "notr1done" = !r1taken;
+label "r2done" = ((r2dist=0 & !r2qual) | r2taken);
+
+label "goal" = finish & done & ((!r1qual & !r2qual ) | (r1taken | r2taken ));
+// label "rockposition" = (!r1taken & r1x = x & r1y = y) | (!r2taken & r2x = x & r2y = y);
+// label "notbad" = !bad;
