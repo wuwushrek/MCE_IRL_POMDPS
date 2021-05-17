@@ -730,7 +730,7 @@ class IRLSolver:
 		# Add the bellman equation constraints
 		self.constr_bellman_flow(mOpt, nu_s, nu_s_a=nu_s_a, sigma=None, gamma=self._options.discount, name='bellman')
 		if self._pomdp.has_sideinfo:
-			self.constr_bellman_flow(mOpt, nu_s_spec, nu_s_a=nu_s_a_spec, sigma=None, gamma=1.0, name='bellman_spec')
+			self.constr_bellman_flow(mOpt, nu_s_spec, nu_s_a=nu_s_a_spec, sigma=None, gamma=1, name='bellman_spec')
 
 		# Create a slack variable for statisfiability of the spec if any
 		slack_spec = mOpt.addVar(lb=0, name='s2') if self._pomdp.has_sideinfo else 0
@@ -777,7 +777,7 @@ class IRLSolver:
 											  gamma=self._options.discount, name='bellman')
 		bellConstrDict = dict()
 		if self._pomdp.has_sideinfo:
-			bellConstrDict = self.constr_bellman_flow(checkOpt, nu_s_ver_spec, nu_s_a=None, sigma=dummy_pol, gamma=1.0,
+			bellConstrDict = self.constr_bellman_flow(checkOpt, nu_s_ver_spec, nu_s_a=None, sigma=dummy_pol, gamma=1,
 													  name='bellman_spec')
 
 		# Save the encoding compute time the of the problem
@@ -787,13 +787,19 @@ class IRLSolver:
 			   constrLin, constrLinSpec, constrTrustReg, \
 			   nu_s_ver, nu_s_ver_spec, bellConstr, bellConstrDict
 
-	def nacc(self, s):
+	def nacc(self, pred_s, s, tProb, gamma):
 		""" Return True if the given state s is not in prob1A and prob0E
 		"""
-		if self._pomdp.has_sideinfo:
-			return s not in self._pomdp.prob1A and s not in self._pomdp.prob0E
-		else:
-			return True
+		# if self._pomdp.has_sideinfo:
+		# 	return s not in self._pomdp.prob1A and s not in self._pomdp.prob0E
+		# else:
+		# 	return True
+		if self._pomdp.has_sideinfo and gamma == 1: # side info and gamma == 1
+			# gamma * (tProb if self.nacc(pred_s) else 0)
+			# return tProb if (pred_s != s or tProb < 1) else 0
+			return tProb if (pred_s not in self._pomdp.prob1A and pred_s not in self._pomdp.prob0E) else 0
+		else: # If not side info or gamma < 1, accepting state shouldn't be ignored in bellman constraint
+			return gamma * tProb
 
 	def constr_state_action_to_state_visition(self, mOpt, nu_s, nu_s_a, name='vis_count'):
 		""" Encode the constraint between nu_s and nu_s_a
@@ -808,7 +814,7 @@ class IRLSolver:
 							name='{}[{}]'.format(name, s)
 							)
 
-	def constr_bellman_flow(self, mOpt, nu_s, nu_s_a=None, sigma=None, gamma=1.0, name='bellman'):
+	def constr_bellman_flow(self, mOpt, nu_s, nu_s_a=None, sigma=None, gamma=1, name='bellman'):
 		""" Compute for all states the constraints by the bellman equation.
 			This function allows only one of nu_s_a or sigma to be None
 			:param mOpt : The gurobi model of the problem
@@ -830,7 +836,7 @@ class IRLSolver:
 					(-1, nu_s_v)
 				])
 			else:  # if the state-action visitation count is given
-				val_expr = gp.LinExpr([*((gamma * (tProb if self.nacc(pred_s) else 0), nu_s_a[pred_s][a]) \
+				val_expr = gp.LinExpr([*((self.nacc(pred_s, s, tProb, gamma), nu_s_a[pred_s][a]) \
 										 for (pred_s, a, tProb) in self._pomdp.pred.get(s, [])
 										 ),
 									   (-1, nu_s_v)
@@ -1027,9 +1033,9 @@ class IRLSolver:
 			listCostTerm.append((-self._options.mu_spec, slack_spec))
 
 		for s, nu_s_val in nu_s.items():
-			# Don't consider accepting states
-			if self._pomdp.has_sideinfo and (s in self._pomdp.prob1A or s in self._pomdp.prob0E):
-				continue
+			# Don't consider states with zero probability of satisfying the spec
+			# if self._pomdp.has_sideinfo and (s in self._pomdp.prob1A or s in self._pomdp.prob0E):
+			# 	continue
 			nu_s_past_val, nu_s_a_past_sval, slack_nu_p_sval, slack_nu_n_sval = nu_s_past[s], nu_s_a_past[s], slack_nu_p[s], slack_nu_n[s]
 			if self._pomdp.has_sideinfo:
 				slack_nu_p_spec_sval, slack_nu_n_spec_sval = slack_nu_p_spec[s], slack_nu_n_spec[s]
@@ -1050,19 +1056,27 @@ class IRLSolver:
 
 		return listCostTerm
 
-	def extract_varcoeff_from_bellman(self, state, policy_val, gamma=1.0):
+	def extract_varcoeff_from_bellman(self, state, policy_val, gamma=1, addSpecCoeff=False):
 		""" Utility function that provides given a policy, the coefficien of each
 			variable nu_s[pred(state)] (in the linear expression) for all predecessor of state
 			:param state : the current state of the pomdp
 			:param policy_val : the underlying policy
+			:param gamma : discount factor
 		"""
 		dictPredCoeff = dict()  # Variable to store the coefficient associated to nu_s[pred(state)]
 		# Get the from the past optimal value, the coefficient for each variable in the bellman constraint
 		for (pred_s, a, tProb) in self._pomdp.pred.get(state, []):
 			if pred_s not in dictPredCoeff:
-				dictPredCoeff[pred_s] = list()
+
+				dictPredCoeff[pred_s] = list() if not addSpecCoeff else (list(), list())
 			for o, p in self._pomdp.obs_state_distr[pred_s].items():
-				dictPredCoeff[pred_s].append(policy_val[o][a] * p * gamma * (tProb if self.nacc(pred_s) else 0))
+				# dictPredCoeff[pred_s].append(policy_val[o][a] * p * gamma * (tProb if self.nacc(pred_s) else 0))
+				if not addSpecCoeff:
+					dictPredCoeff[pred_s].append(policy_val[o][a] * p * self.nacc(pred_s, state, tProb, gamma))
+				else:
+					(l1, l2) = dictPredCoeff[pred_s]
+					l1.append(policy_val[o][a] * p * self.nacc(pred_s, state, tProb, gamma))
+					l2.append(policy_val[o][a] * p * self.nacc(pred_s, state, tProb, 1))
 		return dictPredCoeff
 
 	def verify_solution(self, mOpt, nu_s, policy_val, constrBellman,
@@ -1078,12 +1092,13 @@ class IRLSolver:
 		"""
 		# Update the optimization problem with the given policy
 		for s in nu_s:
-			dicCoeff = self.extract_varcoeff_from_bellman(s, policy_val, gamma=self._options.discount)
+			dicCoeff = self.extract_varcoeff_from_bellman(s, policy_val, gamma=self._options.discount, 
+															addSpecCoeff=self._pomdp.has_sideinfo)
 			for pred_s, coeffV in dicCoeff.items():
-				sum_coeff = sum(coeffV)
-				sum_coeff_undis = sum_coeff / self._options.discount
+				sum_coeff = sum(coeffV[0]) if self._pomdp.has_sideinfo else sum(coeffV)
 				mOpt.chgCoeff(constrBellman[s], nu_s[pred_s], sum_coeff - (1 if pred_s == s else 0))
 				if self._pomdp.has_sideinfo:  # Do a scale back to gamma = 1
+					sum_coeff_undis = sum(coeffV[1]) # sum_coeff / self._options.discount
 					mOpt.chgCoeff(constrBellmanSpec[s], nu_s_spec[pred_s], \
 								  sum_coeff_undis - (1 if pred_s == s else 0))
 
