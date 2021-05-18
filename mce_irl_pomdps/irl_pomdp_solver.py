@@ -278,6 +278,7 @@ class IRLSolver:
 			self.total_solve_time = 0  # Total time elapsed
 			self.init_encoding_time = 0  # Time for encoding the full problem
 			self.update_constraint_time = 0
+			self.checking_policy_time = 0
 
 			self.nu_s, self.nu_s_spec, self.nu_s_a, self.nu_s_a_spec, self.sigma, self.slack_spec, \
 			self.slack_nu_p, self.slack_nu_n, self.slack_nu_p_spec, self.slack_nu_n_spec, \
@@ -424,9 +425,10 @@ class IRLSolver:
 				trust_region = np.minimum(trustRegion['aug'](trust_region), self._max_trust_region)
 				past_rejected = False
 
-				#only update policy within the max_updates
+				#only update policy within the max_updates (and in case there's specs, terminate with policy that satisfies the spec)
 				count_correct_update += 1
-				if count_correct_update >= self._options.max_update:
+				if count_correct_update >= self._options.max_update and \
+					( (not self._pomdp.has_sideinfo) or (spec_cost - self._sat_thresh >= -1e-4)):
 					break
 
 			else:
@@ -476,6 +478,7 @@ class IRLSolver:
 		self.total_solve_time = 0  # Total time elapsed
 		self.init_encoding_time = 0  # Time for encoding the full problem
 		self.update_constraint_time = 0
+		self.checking_policy_time = 0
 
 		self.nu_s, self.nu_s_spec, self.nu_s_a, self.nu_s_a_spec, self.sigma, self.slack_spec, \
 		self.slack_nu_p, self.slack_nu_n, self.slack_nu_p_spec, self.slack_nu_n_spec, \
@@ -583,7 +586,7 @@ class IRLSolver:
 				if self._options.verbose:
 					print("[Iter {}: ----> Reject the current step]".format(i))
 
-			if self._options.verbose:
+			if self._options.verbose or (trust_region < trustRegion['lim']) or (i==self._options.maxiter-1):
 				# print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
 				# print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
 				print("[Iter {}]: Reward attained {}, Spec SAT : {}, Trust region : {}".format(i, curr_rew, spec_cost, trust_region))
@@ -669,7 +672,7 @@ class IRLSolver:
 		self.total_solve_time += time.time() - curr_time
 
 		# Do some printing
-		if self._options.verbose and mOpt.status == gp.GRB.OPTIMAL:
+		if mOpt.status == gp.GRB.OPTIMAL:
 			print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 			print('[Total solving time : {}]'.format(self.total_solve_time))
 			print('[Optimal expected reward : {}]'.format(mOpt.objVal * self._options.mu))
