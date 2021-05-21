@@ -220,7 +220,8 @@ class PrismModel(POMDP):
 		self.build_reward_model(pomdp)
 
 		# Save a string representation
-		self._str_repr = self.get_string(pomdp)
+		# self._str_repr = self.get_string(pomdp)
+		self._str_repr = ""
 
 		if savePomdp: # Save the storm pomdp model if required
 			self.pomdp = pomdp
