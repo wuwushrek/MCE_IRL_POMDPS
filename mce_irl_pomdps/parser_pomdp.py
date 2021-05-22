@@ -42,6 +42,21 @@ class POMDP(ABC):
 
 	@property
 	@abstractmethod
+	def n_trans(self):
+		""" Getter method. Return the number of transitions in the
+			POMDP model
+		"""
+		pass
+
+	@abstractmethod
+	def write_to_dict(self, resDict):
+		""" Save some key components of this POMDP as kets values 
+			of the given dictionary resDict
+		"""
+		pass
+
+	@property
+	@abstractmethod
 	def prob0E(self):
 		""" Set of states with probability zero to satisfy the
 			specifications
@@ -265,6 +280,7 @@ class PrismModel(POMDP):
 		# Save the number of states
 		self._n_state = pomdp.nr_states
 		self._n_obs = pomdp.nr_observations
+		self._n_trans = pomdp.nr_transitions
 
 		# Define the state space
 		self._states = list()
@@ -459,6 +475,10 @@ class PrismModel(POMDP):
 		return self._n_obs
 
 	@property
+	def n_trans(self):
+		return self._n_trans
+
+	@property
 	def prob0E(self):
 		return self._prob0E if self._has_sideinfo else set()
 
@@ -508,6 +528,15 @@ class PrismModel(POMDP):
 
 	def string_repr_state(self, state_id):
 		return self.state_string[state_id]
+
+	def write_to_dict(self, resDict):
+		resDict['ns'] = self.n_state
+		resDict['no'] = self.n_obs
+		resDict['nt'] = self.n_trans
+		resDict['path_prism'] = self._path_prism
+		resDict['mem'] = self.memory_len
+		resDict['counter_type'] = str(self.counter_type)
+		resDict['formula'] = self._formulas
 
 	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
 							obs_based=True, stop_at_accepting_state=True):
@@ -606,54 +635,87 @@ class PrismModel(POMDP):
 		return str_repr
 
 	# def get_string(self, pomdp):
-	# 	""" String represenattion of this POMDP
-	# 	"""
-	# 	# Print the STorm representation of the POMDP
-	# 	str_repr = ""
-	# 	str_repr += "POMDP Model\n"
-	# 	str_repr += pomdp.__str__()
+	#   """ String represenattion of this POMDP
+	#   """
+	#   # Print the STorm representation of the POMDP
+	#   str_repr = ""
+	#   str_repr += "POMDP Model\n"
+	#   str_repr += pomdp.__str__()
 
-	# 	# Get parameteres used in the model file
-	# 	print(dir(stormpy.SparsePomdp))
-	# 	state_val = pomdp.state_valuations
-	# 	choice_lab = pomdp.choice_labeling
-	# 	obs_val = pomdp.observation_valuations
+	#   # Get parameteres used in the model file
+	#   print(dir(stormpy.SparsePomdp))
+	#   state_val = pomdp.state_valuations
+	#   choice_lab = pomdp.choice_labeling
+	#   obs_val = pomdp.observation_valuations
 		
-	# 	# Print the intiial state
-	# 	for state in pomdp.initial_states:
-	# 		str_repr += "Initial state: {} {}\n".format(state, state_val.get_string(state))
+	#   # Print the intiial state
+	#   for state in pomdp.initial_states:
+	#       str_repr += "Initial state: {} {}\n".format(state, state_val.get_string(state))
 		
-	# 	# Print the observation modelStateValuation
-	# 	for state in pomdp.states:
-	# 		str_repr += 'State id: {} {}, observation: {} {} \n'.format(
-	# 			state.id, state_val.get_string(state.id),
-	# 			pomdp.get_observation(state.id),
-	# 			obs_val.get_string(pomdp.get_observation(state.id)))
+	#   # Print the observation modelStateValuation
+	#   for state in pomdp.states:
+	#       str_repr += 'State id: {} {}, observation: {} {} \n'.format(
+	#           state.id, state_val.get_string(state.id),
+	#           pomdp.get_observation(state.id),
+	#           obs_val.get_string(pomdp.get_observation(state.id)))
 
-	# 	# Print all the states actions transition with their valuations and rewards 
-	# 	for state_repr in pomdp.states:
-	# 		for action in state_repr.actions:
-	# 			# Get the choice index
-	# 			c_index = pomdp.get_choice_index(state_repr.id, action.id)
-	# 			print('state, action, Choice index : ', state_repr.id, action.id, c_index)
-	# 			dictR = dict()
-	# 			# Reward model
-	# 			for r_id, r_val in pomdp.reward_models.items():
-	# 				dictR[r_id] = r_val.get_state_action_reward(c_index)
-	# 			str_repr += '-----------------------\n'
-	# 			str_repr += "State id: {} {}, Action id: {} {}, Rewards: {}\n".format(
-	# 				state_repr.id, state_val.get_string(state_repr.id), 
-	# 				action.id, choice_lab.get_labels_of_choice(c_index), dictR)
-	# 			for trans in action.transitions:
-	# 				str_repr += 'State id: {} {}, Action id: {} {} ---> Next state: {} {}, with prob {}\n'.format(
-	# 						state_repr.id, state_val.get_string(state_repr.id), 
-	# 						action.id, choice_lab.get_labels_of_choice(c_index),
-	# 						trans.column, state_val.get_string(trans.column), np.around(trans.value(),3)
-	# 						)
-	# 	return str_repr
+	#   # Print all the states actions transition with their valuations and rewards 
+	#   for state_repr in pomdp.states:
+	#       for action in state_repr.actions:
+	#           # Get the choice index
+	#           c_index = pomdp.get_choice_index(state_repr.id, action.id)
+	#           print('state, action, Choice index : ', state_repr.id, action.id, c_index)
+	#           dictR = dict()
+	#           # Reward model
+	#           for r_id, r_val in pomdp.reward_models.items():
+	#               dictR[r_id] = r_val.get_state_action_reward(c_index)
+	#           str_repr += '-----------------------\n'
+	#           str_repr += "State id: {} {}, Action id: {} {}, Rewards: {}\n".format(
+	#               state_repr.id, state_val.get_string(state_repr.id), 
+	#               action.id, choice_lab.get_labels_of_choice(c_index), dictR)
+	#           for trans in action.transitions:
+	#               str_repr += 'State id: {} {}, Action id: {} {} ---> Next state: {} {}, with prob {}\n'.format(
+	#                       state_repr.id, state_val.get_string(state_repr.id), 
+	#                       action.id, choice_lab.get_labels_of_choice(c_index),
+	#                       trans.column, state_val.get_string(trans.column), np.around(trans.value(),3)
+	#                       )
+	#   return str_repr
 
 	def __str__(self):
 		return self._str_repr
+
+def correct_policy(pol):
+	""" A basic utilities function to deal with numerical issues of computed policies
+		Basically, it set to zero negative values that are close to zero (due to numerical issue of optimizer)
+		and it makes sure the resulting policy for each observation sums up to 1
+	"""
+	res_pol = dict()
+	for o, actDict in pol.items():
+		res_pol[o] = dict()
+		neg_val = dict()
+		sum_val = 0
+		for a, val in actDict.items():
+			if val < 0:
+				res_pol[o][a] = 0
+			elif val > 1:
+				res_pol[o][a] = 1
+			else:
+				res_pol[o][a] = val
+			sum_val += res_pol[o][a]
+		diff_val = 1 - sum_val
+		# print(o, ' : Diff : ', diff_val)
+		for a, val in actDict.items():
+			if res_pol[o][a] + diff_val < 0:
+				res_pol[o][a] = 0
+				diff_val += res_pol[o][a]
+			elif res_pol[o][a] + diff_val > 1:
+				res_pol[o][a] = 1
+				diff_val -= (1-res_pol[o][a])
+				assert diff_val == 0
+			else:
+				res_pol[o][a] += diff_val
+				diff_val = 0
+	return res_pol
 
 if __name__ == "__main__":
 	# Customize maze with loop removed for the poison state
