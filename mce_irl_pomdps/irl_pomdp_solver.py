@@ -2,6 +2,7 @@ import numpy as np
 import gurobipy as gp
 
 from .parser_pomdp import POMDP, PrismModel
+import json
 import time
 
 # A structure to set the rules for reducing and augmenting the trust region
@@ -137,7 +138,7 @@ class IRLSolver:
 			# print('[Optimal policy : {}]'.format({o: {a: p.x for a, p in actVal.items()} for o, actVal in sigma.items()}))
 		return {o: {a: val.x for a, val in actList.items()} for o, actList in sigma.items()}
 
-	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=False):
+	def solve_irl_pomdp_given_traj(self, featMatch, includeQuadCost=False, save_info = None):
 		""" Solve the IRL problem given the feature matching expectation of the
 			sample trajectory
 			:param featMatch : feature counts from the expert
@@ -159,6 +160,10 @@ class IRLSolver:
 		# Create and compute solution of the scp extra_args = (ent_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 		pol, _, extra_args = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching, trust_prev=None)
 		nu_s_a = extra_args[2]
+
+		# Save the stats of the solver
+		stats_solver = dict()
+		self._pomdp.write_to_dict(stats_solver)
 
 		#set initial trust region for IRL part
 		trust_reg_val= self._trust_region
@@ -223,6 +228,20 @@ class IRLSolver:
 					print('[Weight value] : {} ]'.format(weight))
 				break
 
+			# Save the policy if needed
+			if save_info is not None and ((i == self._options.maxiter_weight-1) or (i > 0 and i % save_info[0] == 0)):
+				stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
+				stats_solver['rew'] = extra_args[0]
+				stats_solver['sat_spec'] = sum(extra_args[3][s] for s in self._pomdp.prob1A) if self._pomdp.has_sideinfo else 0
+				for r_name, gradVal in diff_value_dict.items():
+					stats_solver['diff_with_feat__{}'.format(r_name)] = (featMatch[r_name], rew_pol_dict, gradVal, rmsprop[r_name])
+				with open(save_info[1]+'_pol.json', 'w') as fp:
+					json.dump(pol, fp, sort_keys=True, indent=4)
+				with open(save_info[1]+'_weight.json', 'w') as fp:
+					json.dump(weight, fp, sort_keys=True, indent=4)
+				with open(save_info[1]+'_stats.json', 'w') as fp:
+					json.dump(stats_solver, fp, sort_keys=True, indent=4)
+
 			# Update new weight
 			weight = new_weight
 
@@ -240,7 +259,6 @@ class IRLSolver:
 				print('[New weight value] : {} ]'.format(weight))
 				print("Update time : {}s, Checking time : {}s, Solve time: {}s".format(
 					self.update_constraint_time, self.checking_policy_time, self.total_solve_time))
-
 		return weight, pol
 
 	def compute_feature_from_trajectory(self, traj):
@@ -293,27 +311,28 @@ class IRLSolver:
 			# Define the parameters used by Gurobi for the linearized problem
 			self.scpOpt.Params.OutputFlag = self._options.verbose_solver
 			self.scpOpt.Params.Presolve = 2  # More aggressive presolve step
-			# self._encoding.Params.Method = 2 # The problem is not really a QP
+			self.scpOpt.Params.Method = 2 # The problem is not really a QP
 			self.scpOpt.Params.Crossover = 0
 			self.scpOpt.Params.CrossoverBasis = 0
-			self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
+			# self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
 			self.scpOpt.Params.BarHomogeneous = 1  # No need for, our problem is always feasible/bound
 			# self._encoding.Params.ScaleFlag = 3
 			# self.scpOpt.Params.FeasibilityTol = 1e-6
-			# self.scpOpt.Params.OptimalityTol = 1e-6
-			# self.scpOpt.Params.BarConvTol = 1e-6
+			self.scpOpt.Params.OptimalityTol = 1e-6
+			self.scpOpt.Params.BarConvTol = 1e-6
 
 			# Define the parameters used by Gurobi for the auxialiry program
 			self.bellmanOpt.Params.OutputFlag = self._options.verbose_solver
 			self.bellmanOpt.Params.Presolve = 2 
+			self.bellmanOpt.Params.Method = 2
 			self.bellmanOpt.Params.Crossover = 0
 			self.bellmanOpt.Params.CrossoverBasis = 0
-			self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
+			# self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
 			self.bellmanOpt.Params.BarHomogeneous = 1
 			# self._encoding.Params.ScaleFlag = 3
 			# self.bellmanOpt.Params.FeasibilityTol = 1e-6
-			# self.bellmanOpt.Params.OptimalityTol = 1e-6
-			# self.bellmanOpt.Params.BarConvTol = 1e-6
+			self.bellmanOpt.Params.OptimalityTol = 1e-6
+			self.bellmanOpt.Params.BarConvTol = 1e-6
 
 		trust_region = self._trust_region
 
@@ -463,7 +482,7 @@ class IRLSolver:
 
 		return policy_k, trust_region, (latest_ent_spec, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 
-	def from_reward_to_policy_via_scp(self, weight):
+	def from_reward_to_policy_via_scp(self, weight, initPolicy=None, save_info=None):
 		"""Given the weight for each feature functions in the POMDP model,
 			compute the optimal policy that maximizes the expected reward
 			while satisfying the specifications
@@ -493,29 +512,35 @@ class IRLSolver:
 		# Define the parameters used by Gurobi for the linearized problem
 		self.scpOpt.Params.OutputFlag = self._options.verbose_solver
 		self.scpOpt.Params.Presolve = 2  # More aggressive presolve step
-		# self._encoding.Params.Method = 2 # The problem is not really a QP
+		self.scpOpt.Params.Method = 2 # The problem is not really a QP
 		self.scpOpt.Params.Crossover = 0
 		self.scpOpt.Params.CrossoverBasis = 0
-		self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
+		# self.scpOpt.Params.NumericFocus = 3  # Maximum numerical focus
 		self.scpOpt.Params.BarHomogeneous = 1  # No need for, our problem is always feasible/bound
-		# self.scpOpt.Params.ScaleFlag = 3
+		# # self.scpOpt.Params.ScaleFlag = 3
 		# self.scpOpt.Params.FeasibilityTol = 1e-6
-		# self.scpOpt.Params.OptimalityTol = 1e-6
-		# self.scpOpt.Params.BarConvTol = 1e-6
+		self.scpOpt.Params.OptimalityTol = 1e-6
+		self.scpOpt.Params.BarConvTol = 1e-6
 
 		# Define the parameters used by Gurobi for the auxialiry program
 		self.bellmanOpt.Params.OutputFlag = self._options.verbose_solver
+		self.bellmanOpt.Params.Method = 2 
+		self.bellmanOpt.Params.Presolve = 2
 		self.bellmanOpt.Params.Crossover = 0
 		self.bellmanOpt.Params.CrossoverBasis = 0
-		self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
+		# self.bellmanOpt.Params.NumericFocus = 3  # Maximum numerical focus
 		self.bellmanOpt.Params.BarHomogeneous = 1
-		# self._encoding.Params.ScaleFlag = 3
+		# # self._encoding.Params.ScaleFlag = 3
 		# self.bellmanOpt.Params.FeasibilityTol = 1e-6
-		# self.bellmanOpt.Params.OptimalityTol = 1e-6
-		# self.bellmanOpt.Params.BarConvTol = 1e-6
+		self.bellmanOpt.Params.OptimalityTol = 1e-6
+		self.bellmanOpt.Params.BarConvTol = 1e-6
 
 		# Initialize policy at iteration k
-		policy_k = {o: {a: 1.0 / len(actList) for a in actList} for o, actList in self._pomdp.obs_act.items()}
+		if initPolicy is not None:
+			policy_k = initPolicy
+		else:
+			policy_k = {o: {a: 1.0 / len(actList) for a in actList} for o, actList in self._pomdp.obs_act.items()}
+		# policy_k = {o: {a: 1.0 / len(actList) for a in actList} for o, actList in self._pomdp.obs_act.items()}
 
 		# Initialize the state and state-action visitation count based on the policy
 		ent_cost, spec_cost, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k = \
@@ -534,6 +559,13 @@ class IRLSolver:
 
 		# Initial trust region
 		trust_region = self._trust_region
+
+		# Save the optimal reward
+		opt_reward = 0
+
+		# Save the stats of the solver
+		stats_solver = dict()
+		self._pomdp.write_to_dict(stats_solver)
 
 		# Get the total expected reward given theta
 		# linExprReward = [(-c, val) for c, val in self.compute_expected_reward(self.nu_s_a, weight)]
@@ -580,6 +612,7 @@ class IRLSolver:
 				nu_s_k, nu_s_spec_k = nu_s_k_n, nu_s_spec_k_n
 				nu_s_a_k, nu_s_a_spec_k = nu_s_a_k_n, nu_s_a_spec_k_n
 				ent_cost, spec_cost = ent_cost_n, spec_cost_n
+				opt_reward = curr_rew
 				trust_region = np.minimum(trustRegion['aug'](trust_region), self._max_trust_region)
 			else:
 				trust_region = trustRegion['red'](trust_region)
@@ -598,6 +631,20 @@ class IRLSolver:
 																								  self.checking_policy_time,
 																								  self.total_solve_time))
 				# print("[Iter {}]: Trust region : {}".format(i, trust_region))
+
+			# In case it is required to save the policy
+			if save_info is not None and ( (i == self._options.maxiter) or (i > 0 and i % save_info[0] == 0)):
+				stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
+				stats_solver['rew'] = opt_reward
+				stats_solver['sat_spec'] = spec_cost
+				stats_solver['n_iter'] = i+1
+				with open(save_info[1]+'_pol.json', 'w') as fp:
+					json.dump(policy_k, fp, sort_keys=True, indent=4)
+				with open(save_info[1]+'_weight.json', 'w') as fp:
+					json.dump(weight, fp, sort_keys=True, indent=4)
+				with open(save_info[1]+'_stats.json', 'w') as fp:
+					json.dump(stats_solver, fp, sort_keys=True, indent=4)
+
 			if trust_region < trustRegion['lim']:
 				if self._options.verbose:
 					print("[Iter {}: ----> Min trust value reached]".format(i))
@@ -605,7 +652,7 @@ class IRLSolver:
 
 		return policy_k
 
-	def from_reward_to_optimal_policy_mdp_lp(self, weight, gamma=1):
+	def from_reward_to_optimal_policy_mdp_lp(self, weight, gamma=1, save_info=None):
 		""" Given the weight for each feature functions in the underlying MDP model,
 			compute the optimal policy that maximizes the expected reward
 			while satisfying the specifications
@@ -620,6 +667,11 @@ class IRLSolver:
 		mOpt = gp.Model('Optimal Policy of the MDP with Gurobi Solver')
 		self.total_solve_time = 0  # Total time elapsed
 		self.init_encoding_time = 0  # Time for encoding the full problem
+		self.update_constraint_time = 0
+		self.checking_policy_time = 0
+
+		stats_solver = dict()
+		self._pomdp.write_to_dict(stats_solver)
 
 		if self._options.verbose:
 			print('Initialize Linear subproblem to be solved at iteration k')
@@ -683,8 +735,20 @@ class IRLSolver:
 			# print('[Optimal policy : {}]'.format(
 			# 	{s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()}
 			# 	 for s, actVal in nu_s_a.items()}))
-		return {s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()} for
+		res_pol = {s: {a: (p.x / nu_s[s].x if nu_s[s].x > ZERO_NU_S else 1.0 / len(actVal)) for a, p in actVal.items()} for
 				s, actVal in nu_s_a.items()}
+
+		# In case it is required to save the policy
+		if save_info is not None:
+			stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
+			stats_solver['rew'] = mOpt.objVal * self._options.mu
+			with open(save_info[1]+'_pol.json', 'w') as fp:
+				json.dump(res_pol, fp, sort_keys=True, indent=4)
+			with open(save_info[1]+'_weight.json', 'w') as fp:
+				json.dump(weight, fp, sort_keys=True, indent=4)
+			with open(save_info[1]+'_stats.json', 'w') as fp:
+				json.dump(stats_solver, fp, sort_keys=True, indent=4)
+		return res_pol
 
 	def init_optimization_problem(self, mOpt, noLinearization=False, checkOpt=None):
 		""" Initialize the linearized subproblem to solve at iteration k
