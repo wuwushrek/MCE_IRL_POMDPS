@@ -161,7 +161,7 @@ class IRLSolver:
 		pol, _, extra_args = self.compute_maxent_policy_via_scp(weight, init_problem=True, featMatch=featMatching, trust_prev=None)
 		nu_s_a = extra_args[2]
 
-		# Save the stats of the solver
+		# Save the stats of the solver and weights
 		stats_solver = dict()
 		self._pomdp.write_to_dict(stats_solver)
 
@@ -233,12 +233,15 @@ class IRLSolver:
 				stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
 				stats_solver['rew'] = extra_args[0]
 				stats_solver['sat_spec'] = sum(extra_args[3][s] for s in self._pomdp.prob1A) if self._pomdp.has_sideinfo else 0
+				stats_solver['discount'] = self._options.discount
+				stats_solver['obs_based'] = True
 				for r_name, gradVal in diff_value_dict.items():
-					stats_solver['diff_with_feat__{}'.format(r_name)] = (featMatch[r_name], rew_pol_dict, gradVal, rmsprop[r_name])
+					stats_solver['diff_with_feat__{}'.format(r_name)] = \
+						{'learned feature' : featMatch[r_name], 'expert feature' : rew_pol_dict[r_name], 'gradient' : gradVal, 'rmsprop' : rmsprop[r_name]}
 				with open(save_info[1]+'_pol.json', 'w') as fp:
 					json.dump(pol, fp, sort_keys=True, indent=4)
 				with open(save_info[1]+'_weight.json', 'w') as fp:
-					json.dump(weight, fp, sort_keys=True, indent=4)
+					json.dump({'true weight' : save_info[2], 'learned weight' : weight}, fp, sort_keys=True, indent=4)
 				with open(save_info[1]+'_stats.json', 'w') as fp:
 					json.dump(stats_solver, fp, sort_keys=True, indent=4)
 
@@ -638,10 +641,12 @@ class IRLSolver:
 				stats_solver['rew'] = opt_reward
 				stats_solver['sat_spec'] = spec_cost
 				stats_solver['n_iter'] = i+1
+				stats_solver['discount'] = self._options.discount
+				stats_solver['obs_based'] = True
 				with open(save_info[1]+'_pol.json', 'w') as fp:
 					json.dump(policy_k, fp, sort_keys=True, indent=4)
 				with open(save_info[1]+'_weight.json', 'w') as fp:
-					json.dump(weight, fp, sort_keys=True, indent=4)
+					json.dump({'true weight' : save_info[2], 'learned weight' : weight}, fp, sort_keys=True, indent=4)
 				with open(save_info[1]+'_stats.json', 'w') as fp:
 					json.dump(stats_solver, fp, sort_keys=True, indent=4)
 
@@ -742,10 +747,12 @@ class IRLSolver:
 		if save_info is not None:
 			stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
 			stats_solver['rew'] = mOpt.objVal * self._options.mu
+			stats_solver['discount'] = self._options.discount
+			stats_solver['obs_based'] = False
 			with open(save_info[1]+'_pol.json', 'w') as fp:
 				json.dump(res_pol, fp, sort_keys=True, indent=4)
 			with open(save_info[1]+'_weight.json', 'w') as fp:
-				json.dump(weight, fp, sort_keys=True, indent=4)
+				json.dump({'true weight' : save_info[2], 'learned weight' : weight}, fp, sort_keys=True, indent=4)
 			with open(save_info[1]+'_stats.json', 'w') as fp:
 				json.dump(stats_solver, fp, sort_keys=True, indent=4)
 		return res_pol

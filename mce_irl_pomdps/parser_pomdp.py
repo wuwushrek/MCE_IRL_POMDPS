@@ -11,6 +11,13 @@ import stormpy._config as config
 import numpy as np
 import stormpy.simulator
 
+memoryTypeDict = {	'PomdpMemoryPattern.selective_counter' : stormpy.pomdp.PomdpMemoryPattern.selective_counter,
+					'PomdpMemoryPattern.fixed_counter' : stormpy.pomdp.PomdpMemoryPattern.fixed_counter,
+					'PomdpMemoryPattern.selective_ring' : stormpy.pomdp.PomdpMemoryPattern.selective_ring,
+					'PomdpMemoryPattern.fixed_ring' : stormpy.pomdp.PomdpMemoryPattern.fixed_ring,
+					'PomdpMemoryPattern.full' : stormpy.pomdp.PomdpMemoryPattern.full,
+					'PomdpMemoryPattern.trivial' : stormpy.pomdp.PomdpMemoryPattern.trivial
+				}
 
 class POMDP(ABC):
 	""" An abstract class modelling a POMDP.
@@ -538,13 +545,16 @@ class PrismModel(POMDP):
 		resDict['counter_type'] = str(self.counter_type)
 		resDict['formula'] = self._formulas
 
-	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, 
-							obs_based=True, stop_at_accepting_state=True):
+	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, seed=None,
+							obs_based=True, stop_at_accepting_state=True, stat=dict()):
 		assert self.savePomdp, 'POMDP was not saved in memory for simulation'
-		rand_seed = np.random.randint(0, 10000)
+		rand_seed = np.random.randint(0, 10000) if seed is None else seed 
 		simulator = stormpy.simulator.create_simulator(self.pomdp, seed=rand_seed)
 		res_traj = list()
 		rew_list = list()
+		stat['seed'] = rand_seed
+		stat['obs_based'] = obs_based
+		stat['max_len'] = 0
 		for i in range(max_run):
 			# Initialize the simulator
 			obs, reward = simulator.restart()
@@ -579,6 +589,7 @@ class PrismModel(POMDP):
 					else:
 
 						break
+			stat['max_len'] = np.maximum(stat['max_len'], len(acc_reward))
 			#append zeros to the reward after simulation is over
 			while len(acc_reward) < max_iter_per_run:
 				acc_reward.append(0.0)
@@ -695,6 +706,7 @@ def correct_policy(pol):
 		neg_val = dict()
 		sum_val = 0
 		for a, val in actDict.items():
+			# Borderline case negative and greater than 1
 			if val < 0:
 				res_pol[o][a] = 0
 			elif val > 1:
@@ -702,19 +714,22 @@ def correct_policy(pol):
 			else:
 				res_pol[o][a] = val
 			sum_val += res_pol[o][a]
-		diff_val = 1 - sum_val
-		# print(o, ' : Diff : ', diff_val)
 		for a, val in actDict.items():
-			if res_pol[o][a] + diff_val < 0:
-				res_pol[o][a] = 0
-				diff_val += res_pol[o][a]
-			elif res_pol[o][a] + diff_val > 1:
-				res_pol[o][a] = 1
-				diff_val -= (1-res_pol[o][a])
-				assert diff_val == 0
-			else:
-				res_pol[o][a] += diff_val
-				diff_val = 0
+			# Normalization
+			res_pol[o][a] = val/sum_val
+		# diff_val = 1 - sum_val
+		# # print(o, ' : Diff : ', diff_val)
+		# for a, val in actDict.items():
+		# 	if res_pol[o][a] + diff_val < 0:
+		# 		res_pol[o][a] = 0
+		# 		diff_val += res_pol[o][a]
+		# 	elif res_pol[o][a] + diff_val > 1:
+		# 		res_pol[o][a] = 1
+		# 		diff_val -= (1-res_pol[o][a])
+		# 		assert diff_val == 0
+		# 	else:
+		# 		res_pol[o][a] += diff_val
+		# 		diff_val = 0
 	return res_pol
 
 if __name__ == "__main__":
