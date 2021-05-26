@@ -78,28 +78,28 @@ irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1,
 irlPb_1._options = options_opt
 _, pol_mdp_mem1_5 = irlPb_1.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem1_trajsize5mdp_irl', weight))
 _, pol_mdp_mem1_100 = irlPb_1.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem1_trajsize100mdp_irl', weight))
-# # Learn from the MDP demonstrations on a memory len 5
-# irlPb_5._options = options_opt
-# _, pol_mdp_mem5_5 = irlPb_5.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem5_trajsize5mdp_irl', weight))
-# _, pol_mdp_mem5_100 = irlPb_5.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem5_trajsize100mdp_irl', weight))
-# # Learn from the MDP demonstrations on a memory len 10
-# irlPb_10._options = options_opt
-# _, pol_mdp_mem10_5 = irlPb_10.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem10_trajsize5mdp_irl', weight))
-# _, pol_mdp_mem10_100 = irlPb_10.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem10_trajsize100mdp_irl', weight))
+# Learn from the MDP demonstrations on a memory len 5
+irlPb_5._options = options_opt
+_, pol_mdp_mem5_5 = irlPb_5.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem5_trajsize5mdp_irl', weight))
+_, pol_mdp_mem5_100 = irlPb_5.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem5_trajsize100mdp_irl', weight))
+# Learn from the MDP demonstrations on a memory len 10
+irlPb_10._options = options_opt
+_, pol_mdp_mem10_5 = irlPb_10.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem10_trajsize5mdp_irl', weight))
+_, pol_mdp_mem10_100 = irlPb_10.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem10_trajsize100mdp_irl', weight))
 
 
 # Learn from the POMDP demonstrations on a single memory
 irlPb_1._options = options_opt
 _, pol_pomdp_mem1_5 = irlPb_1.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem1_trajsize5pomdp_irl', weight))
 _, pol_pomdp_mem1_100 = irlPb_1.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem1_trajsize100pomdp_irl', weight))
-# # Learn from the POMDP demonstrations on a memory len 5
-# irlPb_5._options = options_opt
-# _, pol_pomdp_mem5_5 = irlPb_5.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem5_trajsize5pomdp_irl', weight))
-# _, pol_pomdp_mem5_100 = irlPb_5.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem5_trajsize100pomdp_irl', weight))
-# # Learn from the POMDP demonstrations on a memory len 10
-# irlPb_10._options = options_opt
-# _, pol_pomdp_mem10_5 = irlPb_10.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem10_trajsize5pomdp_irl', weight))
-# _, pol_pomdp_mem10_100 = irlPb_10.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem10_trajsize100pomdp_irl', weight))
+# Learn from the POMDP demonstrations on a memory len 5
+irlPb_5._options = options_opt
+_, pol_pomdp_mem5_5 = irlPb_5.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem5_trajsize5pomdp_irl', weight))
+_, pol_pomdp_mem5_100 = irlPb_5.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem5_trajsize100pomdp_irl', weight))
+# Learn from the POMDP demonstrations on a memory len 10
+irlPb_10._options = options_opt
+_, pol_pomdp_mem10_5 = irlPb_10.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem10_trajsize5pomdp_irl', weight))
+_, pol_pomdp_mem10_100 = irlPb_10.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem10_trajsize100pomdp_irl', weight))
 
 
 # Build the model with side information
@@ -122,25 +122,25 @@ irlPb_10_si = irl_solver.IRLSolver(pomdp_r_10_si, init_trust_region=1.01, sat_th
 irlPb_1_si._options = options_opt
 _, pol_mdp_mem1_5_si = irlPb_1_si.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem1_trajsize5mdp_irl_si', weight))
 _, pol_mdp_mem1_100_si = irlPb_1_si.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem1_trajsize100mdp_irl_si', weight))
-# # Learn from the MDP demonstrations on a memory len 5
-# irlPb_5_si._options = options_opt
-# _, pol_mdp_mem5_5_si = irlPb_5_si.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem5_trajsize5mdp_irl_si', weight))
-# _, pol_mdp_mem5_100_si = irlPb_5_si.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem5_trajsize100mdp_irl_si', weight))
-# # Learn from the MDP demonstrations on a memory len 10
-# irlPb_10_si._options = options_opt
-# _, pol_mdp_mem10_5_si = irlPb_10_si.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem10_trajsize5mdp_irl_si', weight))
-# _, pol_mdp_mem10_100_si = irlPb_10_si.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem10_trajsize100mdp_irl_si', weight))
+# Learn from the MDP demonstrations on a memory len 5
+irlPb_5_si._options = options_opt
+_, pol_mdp_mem5_5_si = irlPb_5_si.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem5_trajsize5mdp_irl_si', weight))
+_, pol_mdp_mem5_100_si = irlPb_5_si.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem5_trajsize100mdp_irl_si', weight))
+# Learn from the MDP demonstrations on a memory len 10
+irlPb_10_si._options = options_opt
+_, pol_mdp_mem10_5_si = irlPb_10_si.solve_irl_pomdp_given_traj(feat_mdp_5, save_info=(20, 'maze_mem10_trajsize5mdp_irl_si', weight))
+_, pol_mdp_mem10_100_si = irlPb_10_si.solve_irl_pomdp_given_traj(feat_mdp_100, save_info=(20, 'maze_mem10_trajsize100mdp_irl_si', weight))
 
 
 # Learn from the POMDP demonstrations on a single memory
 irlPb_1_si._options = options_opt
 _, pol_pomdp_mem1_5 = irlPb_1_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem1_trajsize5pomdp_irl_si', weight))
 _, pol_pomdp_mem1_100 = irlPb_1_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem1_trajsize100pomdp_irl_si', weight))
-# # Learn from the POMDP demonstrations on a memory len 5
-# irlPb_5_si._options = options_opt
-# _, pol_pomdp_mem5_5 = irlPb_5_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem5_trajsize5pomdp_irl_si', weight))
-# _, pol_pomdp_mem5_100 = irlPb_5_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem5_trajsize100pomdp_irl_si', weight))
-# # Learn from the POMDP demonstrations on a memory len 10
-# irlPb_10_si._options = options_opt
-# _, pol_pomdp_mem10_5 = irlPb_10_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem10_trajsize5pomdp_irl_si', weight))
-# _, pol_pomdp_mem10_100 = irlPb_10_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem10_trajsize100pomdp_irl_si', weight))
+# Learn from the POMDP demonstrations on a memory len 5
+irlPb_5_si._options = options_opt
+_, pol_pomdp_mem5_5 = irlPb_5_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem5_trajsize5pomdp_irl_si', weight))
+_, pol_pomdp_mem5_100 = irlPb_5_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem5_trajsize100pomdp_irl_si', weight))
+# Learn from the POMDP demonstrations on a memory len 10
+irlPb_10_si._options = options_opt
+_, pol_pomdp_mem10_5 = irlPb_10_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_5, save_info=(20, 'maze_mem10_trajsize5pomdp_irl_si', weight))
+_, pol_pomdp_mem10_100 = irlPb_10_si.solve_irl_pomdp_given_traj(feat_pomdp_mem15_100, save_info=(20, 'maze_mem10_trajsize100pomdp_irl_si', weight))
