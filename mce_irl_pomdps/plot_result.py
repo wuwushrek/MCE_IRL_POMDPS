@@ -1,20 +1,22 @@
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 from mce_irl_pomdps import parser_pomdp
 
 import json
 
-def plot_data(exp_name, label, fig, max_run=1000, max_iter_per_run=50, 
+def parse_data(exp_name, label, max_run=1000, max_iter_per_run=50, 
 				seed=201, color='red', linestyle='solid', 
 				include_errobar=True, errorbariter=2, errorbarsize=6,
-				linesize=3, markertype=None, markersize=None):
+				linesize=3, markertype=None, markersize=None,
+				save_result= dict()):
 	""" Simulate a given policy and plot the evolution of reward with the
 		true weight instead of the learned weight
 		:param exp_name : the name/path of the file containing the policy, weights and statistics
 						of the learner. Typically, it has the files 
 						{exp_name}_pol.json, {exp_name}_weight.json, {exp_name}_stats.json must exists
 		:param label : The label associated to this data
-		:param fig : An instance of plt figure to draw the data on
 		:param max_run : The number of run when simulating the policy
 		:param max_iter_per_tun : The maximum number of iteraction with the environment in a run
 		:param seed : A seed for reproducibility of the simulation
@@ -26,6 +28,7 @@ def plot_data(exp_name, label, fig, max_run=1000, max_iter_per_run=50,
 		:param linesize : Specify the size of each line in the plot
 		:param markertype : If marker are used, it specifies the type of the marker
 		:param markersize : specify the size of the markers
+		:param save_result : A dictionary containing the results of the simulation
 	"""
 	# Read the file
 	with open(exp_name+'_stats.json', 'r') as f:
@@ -63,18 +66,29 @@ def plot_data(exp_name, label, fig, max_run=1000, max_iter_per_run=50,
 	# arr_rewData = np.cumsum(np.array(rewData)[:, :stat_sim['max_len']], axis=1)
 	arr_rewData = np.cumsum(np.array(rewData), axis=1)
 	mean_rew = np.mean(arr_rewData, axis = 0)
-	min_rew = np.min(arr_rewData, axis=0)
-	max_rew = np.max(arr_rewData, axis=0)
+	# min_rew = np.min(arr_rewData, axis=0)
+	# max_rew = np.max(arr_rewData, axis=0)
 	std_rew = np.std(arr_rewData, axis=0)
-	axis_x = np.array([i for i in range(mean_rew.shape[0])])
+	# axis_x = np.array([i for i in range(mean_rew.shape[0])])
+	save_result[exp_name] = (mean_rew, std_rew, label, color, include_errobar, linestyle, linesize, 
+								errorbariter, errorbarsize, markertype, markersize)
 
+
+
+def plot_data(fig, dict_result):
+	""" Plot on the figure the accumulated reward
+		:param fig : An instance of plt figure to draw the data on
+		:dict_result : THe results of parse_data and contains the parameters 
+						required to plot and differentiate between the different results
+	"""
 	# Plot the data
-	ax = fig.gca()
-	ax.plot(axis_x, mean_rew, color=color, label=label, 
-				linestyle=linestyle, linewidth=linesize, marker=markertype, markersize=markersize)
-	# err_val = np.maximum(min_rew,mean_rew-std_rew) - np.minimum(max_rew,mean_rew+std_rew)
-	
-	if include_errobar:
-		err_val = std_rew
-		ax.errorbar(axis_x[0:axis_x.shape[0]:errorbariter], mean_rew[0:axis_x.shape[0]:errorbariter], 
-			yerr = err_val[0:axis_x.shape[0]:errorbariter], color=color, fmt='none', capsize=errorbarsize)
+	ax = plt.gca()
+	for elemName, (mean_rew, std_rew, label, color, include_errobar, linestyle, linesize, errorbariter, errorbarsize, markertype, markersize) in dict_result.items():
+		len_a = mean_rew.shape[0]
+		axis_x = range(len_a)
+		ax.plot(axis_x, mean_rew, color=color, label=label, 
+					linestyle=linestyle, linewidth=linesize, marker=markertype, markersize=markersize)
+		if include_errobar:
+			err_val = std_rew
+			ax.errorbar(axis_x[0:len_a:errorbariter], mean_rew[0:len_a:errorbariter], 
+				yerr = err_val[0:len_a:errorbariter], color=color, fmt='none', capsize=errorbarsize)
