@@ -31,7 +31,7 @@ def compare_perf_forward(output_file = 'maze_memory_impact_fwd', show=True):
 	markertype=None
 	markersize=None
 	# Error bar parameters
-	include_errobar = True
+	include_errobar = False
 	errorbarsize = 3*linesize
 	errorbariter = 5 # <---- To modify if more bars are need
 
@@ -109,7 +109,7 @@ def compare_perf_irl(output_file ='maze_demo_from_mdp_irl', demo_from_mdp=True, 
 	markertype=None
 	markersize=None
 	# Error bar parameters
-	include_errobar = True
+	include_errobar = False
 	errorbarsize = 3*linesize
 	errorbariter = 5 # <---- To modify if more bars are need
 
