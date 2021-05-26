@@ -72,6 +72,15 @@ def parse_data(exp_name, label, max_run=1000, max_iter_per_run=50,
 	# axis_x = np.array([i for i in range(mean_rew.shape[0])])
 	save_result[exp_name] = (mean_rew, std_rew, label, color, include_errobar, linestyle, linesize, 
 								errorbariter, errorbarsize, markertype, markersize)
+	# Save the file
+	outf = open('dat_files/'+exp_name+'.tex', 'w')
+	# outf.write('\\begin{{filecontents*}}{}\n'.format('{'+exp_name+'.dat}'))
+	outf.write('% {}\n'.format(label))
+	outf.write('x\ty\terr\n')
+	for i in range(mean_rew.shape[0]):
+		outf.write('{}\t{}\t{}\n'.format(i, mean_rew[i], std_rew[i]))
+	# outf.write('\\end{filecontents*}')
+	outf.close()
 
 
 
@@ -92,3 +101,5 @@ def plot_data(fig, dict_result):
 			err_val = std_rew
 			ax.errorbar(axis_x[0:len_a:errorbariter], mean_rew[0:len_a:errorbariter], 
 				yerr = err_val[0:len_a:errorbariter], color=color, fmt='none', capsize=errorbarsize)
+			# ax.fill_between(axis_x[0:len_a:errorbariter], (mean_rew-std_rew)[0:len_a:errorbariter], 
+			# 					(mean_rew+std_rew)[0:len_a:errorbariter], color=color, alpha=0.5)
