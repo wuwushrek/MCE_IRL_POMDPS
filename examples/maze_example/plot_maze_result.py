@@ -69,27 +69,39 @@ def compare_perf_forward(output_file = 'maze_memory_impact_fwd', show=True):
 	if show:
 		plt.show()
 
-def compare_perf_forward(output_file = 'maze_demo_from_mdp_irl', show=True):
+def compare_perf_irl(output_file ='maze_demo_from_mdp_irl', demo_from_mdp=True, show=True):
 	""" Compare the different learnt policies
 	"""
-	output_file = 'maze_memory_impact_fwd'
 	# Seed for reproductibility
 	seed = 201
 	# NUmber of run and number of interactions in each run
 	max_run = 2000
 	max_iter_per_run = 100
 	# Data information and how to they should be vizualize
-	file_names = ['maze_mdp_fwd', 'maze_mem15_fwd', 'maze_mem1_trajsize5mdp_irl', 'maze_mem1_trajsize100mdp_irl',
-					'maze_mem10_trajsize5mdp_irl', 'maze_mem10_trajsize100mdp_irl',
-					'maze_mem1_trajsize5mdp_irl_si', 'maze_mem1_trajsize100mdp_irl_si',
-					'maze_mem10_trajsize5mdp_irl_si', 'maze_mem10_trajsize100mdp_irl_si' ]
-	labels = [r'$\mathrm{Opt. \ policy \  on \ MDP}$', r'$\mathrm{Opt. \ FSC \ on  \ POMDP, |n|=15}$',
-				r'$\mathrm{Learned policy, \ |n|=1,N=5}$', r'$N=100$',
-				r'$\mathrm{Learned policy, \ |n|=10,N=5}$', r'$N=100$',
-				r'$\mathrm{Guided policy, \ |n|=1,N=5}$', r'$N=100$',
-				r'$\mathrm{Guided policy, \ |n|=10,N=5}$', r'$N=100$']
-	color_values = ['blue', 'red', 'gray', 'gray', 'green', 'green', 'indigo', 'indigo', 'darkorange', 'darkorange']
-	linestyles = ['solid', 'solid', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed', 'solid']
+	labelMDP = r'$\mathrm{Opt. \ policy \  on \ MDP}$'
+	labelPOMDP = r'$\mathrm{Opt. \ FSC \  on \ POMDP, |n|=15}$'
+	if demo_from_mdp:
+		file_names = ['maze_mdp_fwd', 'maze_mem15_fwd', 
+					'maze_mem1_trajsize5mdp_irl',
+					'maze_mem10_trajsize5mdp_irl',
+					'maze_mem1_trajsize5mdp_irl_si',
+					'maze_mem10_trajsize5mdp_irl_si']
+		labelMDP = r'$\mathrm{Opt. \ policy \  on \ MDP, \ N=5}$'
+	else:
+		file_names = ['maze_mdp_fwd', 'maze_mem15_fwd', 
+					'maze_mem1_trajsize5pomdp_irl',
+					'maze_mem10_trajsize5pomdp_irl',
+					'maze_mem1_trajsize5pomdp_irl_si',
+					'maze_mem10_trajsize5pomdp_irl_si']
+		labelPOMDP = r'$\mathrm{Opt. \ FSC \  on \ POMDP, \ |n|=15, N=5}$'
+	labels = [	labelMDP, 
+				labelPOMDP,
+				r'$\mathrm{Learned \ policy, \ |n|=1}$',
+				r'$\mathrm{Learned \ policy, \ |n|=10}$',
+				r'$\mathrm{Guided \ policy, \ |n|=1}$',
+				r'$\mathrm{Guided \ policy, \ |n|=10}$']
+	color_values = ['blue', 'red', 'gold', 'green', 'indigo', 'olive']
+	linestyles = ['solid', 'solid', 'solid', 'solid', 'solid', 'solid']
 	xaxislabel = r'$\mathrm{Time \ steps}$'
 	yaxislabel = r'$\mathrm{Mean \ accumulated \ reward}$'
 	# Plots parameters
@@ -114,8 +126,8 @@ def compare_perf_forward(output_file = 'maze_demo_from_mdp_irl', show=True):
 		# plot_data(fname, label, fig, max_run, max_iter_per_run, 
 		# 		seed, color, linestyle, include_errobar, errorbariter, 
 		# 		errorbarsize, linesize, markertype, markersize)
-	# print(sim_result)
-	# # # Parrallelize the plotting
+
+	# Parrallelize the plotting
 	with Pool(multiprocessing.cpu_count()) as pool:
 		pool.starmap(parse_data, args_set)
 
@@ -136,4 +148,6 @@ def compare_perf_forward(output_file = 'maze_demo_from_mdp_irl', show=True):
 		plt.show()
 
 if __name__ == '__main__':
-	compare_perf_forward()
+	compare_perf_forward(show=False)
+	compare_perf_irl(output_file ='maze_demo_from_mdp_irl', demo_from_mdp=True, show=False)
+	compare_perf_irl(output_file ='maze_demo_from_pomdp_irl', demo_from_mdp=False, show=True)
