@@ -1,0 +1,1949 @@
+discount: 0.999
+values: reward
+states: 102
+actions: west south placement finish north east
+observations: 5
+
+start: 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+T : * : * : * 0.0
+R : * : * : * : * 0.0
+
+R : placement : 0 : * : * 0.0
+T : placement : 0 : 1 0.25
+T : placement : 0 : 2 0.25
+T : placement : 0 : 3 0.25
+T : placement : 0 : 4 0.25
+T : finish : 0 : 0 1.0
+T : east : 0 : 0 1.0
+T : north : 0 : 0 1.0
+T : west : 0 : 0 1.0
+T : south : 0 : 0 1.0
+
+R : placement : 1 : * : * 0.0
+T : placement : 1 : 1 0.25
+T : placement : 1 : 2 0.25
+T : placement : 1 : 3 0.25
+T : placement : 1 : 4 0.25
+R : north : 1 : * : * 0.0
+T : north : 1 : 5 0.9
+T : north : 1 : 6 0.1
+R : south : 1 : * : * 0.0
+T : south : 1 : 7 1.0
+R : east : 1 : * : * 0.0
+T : east : 1 : 8 0.9
+T : east : 1 : 9 0.1
+R : west : 1 : * : * 0.0
+T : west : 1 : 10 0.9
+T : west : 1 : 11 0.1
+T : finish : 1 : 1 1.0
+
+R : placement : 2 : * : * 0.0
+T : placement : 2 : 1 0.25
+T : placement : 2 : 2 0.25
+T : placement : 2 : 3 0.25
+T : placement : 2 : 4 0.25
+R : north : 2 : * : * 0.0
+T : north : 2 : 12 1.0
+R : south : 2 : * : * 0.0
+T : south : 2 : 4 0.1
+T : south : 2 : 13 0.9
+R : east : 2 : * : * 0.0
+T : east : 2 : 3 0.9
+T : east : 2 : 14 0.1
+R : west : 2 : * : * 0.0
+T : west : 2 : 15 1.0
+T : finish : 2 : 2 1.0
+
+R : placement : 3 : * : * 0.0
+T : placement : 3 : 1 0.25
+T : placement : 3 : 2 0.25
+T : placement : 3 : 3 0.25
+T : placement : 3 : 4 0.25
+R : north : 3 : * : * 0.0
+T : north : 3 : 16 1.0
+R : south : 3 : * : * 0.0
+T : south : 3 : 17 0.9
+T : south : 3 : 18 0.1
+R : east : 3 : * : * 0.0
+T : east : 3 : 14 0.9
+T : east : 3 : 19 0.1
+R : west : 3 : * : * 0.0
+T : west : 3 : 2 0.9
+T : west : 3 : 15 0.1
+T : finish : 3 : 3 1.0
+
+R : placement : 4 : * : * 0.0
+T : placement : 4 : 1 0.25
+T : placement : 4 : 2 0.25
+T : placement : 4 : 3 0.25
+T : placement : 4 : 4 0.25
+R : north : 4 : * : * 0.0
+T : north : 4 : 2 0.1
+T : north : 4 : 13 0.9
+R : south : 4 : * : * 0.0
+T : south : 4 : 20 0.9
+T : south : 4 : 21 0.1
+R : east : 4 : * : * 0.0
+T : east : 4 : 18 0.9
+T : east : 4 : 22 0.1
+R : west : 4 : * : * 0.0
+T : west : 4 : 23 1.0
+T : finish : 4 : 4 1.0
+
+R : placement : 5 : * : * 0.0
+T : placement : 5 : 1 0.25
+T : placement : 5 : 2 0.25
+T : placement : 5 : 3 0.25
+T : placement : 5 : 4 0.25
+R : north : 5 : * : * 0.0
+T : north : 5 : 6 0.9
+T : north : 5 : 24 0.1
+R : south : 5 : * : * 0.0
+T : south : 5 : 1 0.9
+T : south : 5 : 7 0.1
+R : east : 5 : * : * 0.0
+T : east : 5 : 25 0.9
+T : east : 5 : 26 0.1
+R : west : 5 : * : * 0.0
+T : west : 5 : 27 0.9
+T : west : 5 : 28 0.1
+T : finish : 5 : 5 1.0
+
+R : placement : 6 : * : * 0.0
+T : placement : 6 : 1 0.25
+T : placement : 6 : 2 0.25
+T : placement : 6 : 3 0.25
+T : placement : 6 : 4 0.25
+R : north : 6 : * : * 0.0
+T : north : 6 : 24 0.9
+T : north : 6 : 29 0.1
+R : south : 6 : * : * 0.0
+T : south : 6 : 1 0.1
+T : south : 6 : 5 0.9
+R : east : 6 : * : * 0.0
+T : east : 6 : 30 0.9
+T : east : 6 : 31 0.1
+R : west : 6 : * : * 0.0
+T : west : 6 : 32 0.9
+T : west : 6 : 33 0.1
+T : finish : 6 : 6 1.0
+
+R : placement : 7 : * : * 0.0
+T : placement : 7 : 1 0.25
+T : placement : 7 : 2 0.25
+T : placement : 7 : 3 0.25
+T : placement : 7 : 4 0.25
+R : north : 7 : * : * 0.0
+T : north : 7 : 1 0.9
+T : north : 7 : 5 0.1
+R : south : 7 : * : * 0.0
+T : south : 7 : 7 1.0
+R : east : 7 : * : * 0.0
+T : east : 7 : 34 0.9
+T : east : 7 : 35 0.1
+R : west : 7 : * : * 0.0
+T : west : 7 : 36 0.9
+T : west : 7 : 37 0.1
+T : finish : 7 : 7 1.0
+
+R : placement : 8 : * : * 0.0
+T : placement : 8 : 1 0.25
+T : placement : 8 : 2 0.25
+T : placement : 8 : 3 0.25
+T : placement : 8 : 4 0.25
+R : north : 8 : * : * 0.0
+T : north : 8 : 25 0.9
+T : north : 8 : 30 0.1
+R : south : 8 : * : * 0.0
+T : south : 8 : 34 1.0
+R : east : 8 : * : * 0.0
+T : east : 8 : 9 1.0
+R : west : 8 : * : * 0.0
+T : west : 8 : 1 0.9
+T : west : 8 : 10 0.1
+T : finish : 8 : 8 1.0
+
+R : placement : 9 : * : * 0.0
+T : placement : 9 : 1 0.25
+T : placement : 9 : 2 0.25
+T : placement : 9 : 3 0.25
+T : placement : 9 : 4 0.25
+R : north : 9 : * : * 0.0
+T : north : 9 : 26 0.9
+T : north : 9 : 31 0.1
+R : south : 9 : * : * 0.0
+T : south : 9 : 35 1.0
+R : east : 9 : * : * 0.0
+T : east : 9 : 9 1.0
+R : west : 9 : * : * 0.0
+T : west : 9 : 1 0.1
+T : west : 9 : 8 0.9
+T : finish : 9 : 9 1.0
+
+R : placement : 10 : * : * 0.0
+T : placement : 10 : 1 0.25
+T : placement : 10 : 2 0.25
+T : placement : 10 : 3 0.25
+T : placement : 10 : 4 0.25
+R : north : 10 : * : * 0.0
+T : north : 10 : 27 0.9
+T : north : 10 : 32 0.1
+R : south : 10 : * : * 0.0
+T : south : 10 : 36 1.0
+R : east : 10 : * : * 0.0
+T : east : 10 : 1 0.9
+T : east : 10 : 8 0.1
+R : west : 10 : * : * 0.0
+T : west : 10 : 11 0.9
+T : west : 10 : 38 0.1
+T : finish : 10 : 10 1.0
+
+R : placement : 11 : * : * 0.0
+T : placement : 11 : 1 0.25
+T : placement : 11 : 2 0.25
+T : placement : 11 : 3 0.25
+T : placement : 11 : 4 0.25
+R : north : 11 : * : * 0.0
+T : north : 11 : 28 0.9
+T : north : 11 : 33 0.1
+R : south : 11 : * : * 0.0
+T : south : 11 : 37 1.0
+R : east : 11 : * : * 0.0
+T : east : 11 : 1 0.1
+T : east : 11 : 10 0.9
+R : west : 11 : * : * 0.0
+T : west : 11 : 38 0.9
+T : west : 11 : 39 0.1
+T : finish : 11 : 11 1.0
+
+R : placement : 12 : * : * 0.0
+T : placement : 12 : 1 0.25
+T : placement : 12 : 2 0.25
+T : placement : 12 : 3 0.25
+T : placement : 12 : 4 0.25
+R : north : 12 : * : * 0.0
+T : north : 12 : 12 1.0
+R : south : 12 : * : * 0.0
+T : south : 12 : 2 0.9
+T : south : 12 : 13 0.1
+R : east : 12 : * : * 0.0
+T : east : 12 : 16 0.9
+T : east : 12 : 40 0.1
+R : west : 12 : * : * 0.0
+T : west : 12 : 41 1.0
+T : finish : 12 : 12 1.0
+
+R : placement : 13 : * : * 0.0
+T : placement : 13 : 1 0.25
+T : placement : 13 : 2 0.25
+T : placement : 13 : 3 0.25
+T : placement : 13 : 4 0.25
+R : north : 13 : * : * 0.0
+T : north : 13 : 2 0.9
+T : north : 13 : 12 0.1
+R : south : 13 : * : * 0.0
+T : south : 13 : 4 0.9
+T : south : 13 : 20 0.1
+R : east : 13 : * : * 0.0
+T : east : 13 : 17 0.9
+T : east : 13 : 42 0.1
+R : west : 13 : * : * 0.0
+T : west : 13 : 43 1.0
+T : finish : 13 : 13 1.0
+
+R : placement : 14 : * : * 0.0
+T : placement : 14 : 1 0.25
+T : placement : 14 : 2 0.25
+T : placement : 14 : 3 0.25
+T : placement : 14 : 4 0.25
+R : north : 14 : * : * 0.0
+T : north : 14 : 40 1.0
+R : south : 14 : * : * 0.0
+T : south : 14 : 22 0.1
+T : south : 14 : 42 0.9
+R : east : 14 : * : * 0.0
+T : east : 14 : 19 0.9
+T : east : 14 : 44 0.1
+R : west : 14 : * : * 0.0
+T : west : 14 : 2 0.1
+T : west : 14 : 3 0.9
+T : finish : 14 : 14 1.0
+
+R : placement : 15 : * : * 0.0
+T : placement : 15 : 1 0.25
+T : placement : 15 : 2 0.25
+T : placement : 15 : 3 0.25
+T : placement : 15 : 4 0.25
+R : north : 15 : * : * 0.0
+T : north : 15 : 41 1.0
+R : south : 15 : * : * 0.0
+T : south : 15 : 23 0.1
+T : south : 15 : 43 0.9
+R : east : 15 : * : * 0.0
+T : east : 15 : 2 0.9
+T : east : 15 : 3 0.1
+R : west : 15 : * : * 0.0
+T : west : 15 : 15 1.0
+T : finish : 15 : 15 1.0
+
+R : placement : 16 : * : * 0.0
+T : placement : 16 : 1 0.25
+T : placement : 16 : 2 0.25
+T : placement : 16 : 3 0.25
+T : placement : 16 : 4 0.25
+R : north : 16 : * : * 0.0
+T : north : 16 : 16 1.0
+R : south : 16 : * : * 0.0
+T : south : 16 : 3 0.9
+T : south : 16 : 17 0.1
+R : east : 16 : * : * 0.0
+T : east : 16 : 40 0.9
+T : east : 16 : 45 0.1
+R : west : 16 : * : * 0.0
+T : west : 16 : 12 0.9
+T : west : 16 : 41 0.1
+T : finish : 16 : 16 1.0
+
+R : placement : 17 : * : * 0.0
+T : placement : 17 : 1 0.25
+T : placement : 17 : 2 0.25
+T : placement : 17 : 3 0.25
+T : placement : 17 : 4 0.25
+R : north : 17 : * : * 0.0
+T : north : 17 : 3 0.9
+T : north : 17 : 16 0.1
+R : south : 17 : * : * 0.0
+T : south : 17 : 18 0.9
+T : south : 17 : 46 0.1
+R : east : 17 : * : * 0.0
+T : east : 17 : 42 0.9
+T : east : 17 : 47 0.1
+R : west : 17 : * : * 0.0
+T : west : 17 : 13 0.9
+T : west : 17 : 43 0.1
+T : finish : 17 : 17 1.0
+
+R : placement : 18 : * : * 0.0
+T : placement : 18 : 1 0.25
+T : placement : 18 : 2 0.25
+T : placement : 18 : 3 0.25
+T : placement : 18 : 4 0.25
+R : north : 18 : * : * 0.0
+T : north : 18 : 3 0.1
+T : north : 18 : 17 0.9
+R : south : 18 : * : * 0.0
+T : south : 18 : 46 0.9
+T : south : 18 : 48 0.1
+R : east : 18 : * : * 0.0
+T : east : 18 : 22 0.9
+T : east : 18 : 49 0.1
+R : west : 18 : * : * 0.0
+T : west : 18 : 4 0.9
+T : west : 18 : 23 0.1
+T : finish : 18 : 18 1.0
+
+R : placement : 19 : * : * 0.0
+T : placement : 19 : 1 0.25
+T : placement : 19 : 2 0.25
+T : placement : 19 : 3 0.25
+T : placement : 19 : 4 0.25
+R : north : 19 : * : * 0.0
+T : north : 19 : 45 1.0
+R : south : 19 : * : * 0.0
+T : south : 19 : 47 0.9
+T : south : 19 : 49 0.1
+R : east : 19 : * : * 0.0
+T : east : 19 : 44 0.9
+T : east : 19 : 50 0.1
+R : west : 19 : * : * 0.0
+T : west : 19 : 3 0.1
+T : west : 19 : 14 0.9
+T : finish : 19 : 19 1.0
+
+R : placement : 20 : * : * 0.0
+T : placement : 20 : 1 0.25
+T : placement : 20 : 2 0.25
+T : placement : 20 : 3 0.25
+T : placement : 20 : 4 0.25
+R : north : 20 : * : * 0.0
+T : north : 20 : 4 0.9
+T : north : 20 : 13 0.1
+R : south : 20 : * : * 0.0
+T : south : 20 : 21 0.9
+T : south : 20 : 51 0.1
+R : east : 20 : * : * 0.0
+T : east : 20 : 46 0.9
+T : east : 20 : 52 0.1
+R : west : 20 : * : * 0.0
+T : west : 20 : 53 1.0
+T : finish : 20 : 20 1.0
+
+R : placement : 21 : * : * 0.0
+T : placement : 21 : 1 0.25
+T : placement : 21 : 2 0.25
+T : placement : 21 : 3 0.25
+T : placement : 21 : 4 0.25
+R : north : 21 : * : * 0.0
+T : north : 21 : 4 0.1
+T : north : 21 : 20 0.9
+R : south : 21 : * : * 0.0
+T : south : 21 : 51 0.9
+T : south : 21 : 54 0.1
+R : east : 21 : * : * 0.0
+T : east : 21 : 48 0.9
+T : east : 21 : 55 0.1
+R : west : 21 : * : * 0.0
+T : west : 21 : 56 1.0
+T : finish : 21 : 21 1.0
+
+R : placement : 22 : * : * 0.0
+T : placement : 22 : 1 0.25
+T : placement : 22 : 2 0.25
+T : placement : 22 : 3 0.25
+T : placement : 22 : 4 0.25
+R : north : 22 : * : * 0.0
+T : north : 22 : 14 0.1
+T : north : 22 : 42 0.9
+R : south : 22 : * : * 0.0
+T : south : 22 : 52 0.9
+T : south : 22 : 55 0.1
+R : east : 22 : * : * 0.0
+T : east : 22 : 49 0.9
+T : east : 22 : 57 0.1
+R : west : 22 : * : * 0.0
+T : west : 22 : 4 0.1
+T : west : 22 : 18 0.9
+T : finish : 22 : 22 1.0
+
+R : placement : 23 : * : * 0.0
+T : placement : 23 : 1 0.25
+T : placement : 23 : 2 0.25
+T : placement : 23 : 3 0.25
+T : placement : 23 : 4 0.25
+R : north : 23 : * : * 0.0
+T : north : 23 : 15 0.1
+T : north : 23 : 43 0.9
+R : south : 23 : * : * 0.0
+T : south : 23 : 53 0.9
+T : south : 23 : 56 0.1
+R : east : 23 : * : * 0.0
+T : east : 23 : 4 0.9
+T : east : 23 : 18 0.1
+R : west : 23 : * : * 0.0
+T : west : 23 : 23 1.0
+T : finish : 23 : 23 1.0
+
+R : placement : 24 : * : * 0.0
+T : placement : 24 : 1 0.25
+T : placement : 24 : 2 0.25
+T : placement : 24 : 3 0.25
+T : placement : 24 : 4 0.25
+R : north : 24 : * : * 0.0
+T : north : 24 : 29 0.9
+T : north : 24 : 58 0.1
+R : south : 24 : * : * 0.0
+T : south : 24 : 5 0.1
+T : south : 24 : 6 0.9
+R : east : 24 : * : * 0.0
+T : east : 24 : 59 0.9
+T : east : 24 : 60 0.1
+R : west : 24 : * : * 0.0
+T : west : 24 : 61 0.9
+T : west : 24 : 62 0.1
+T : finish : 24 : 24 1.0
+
+R : placement : 25 : * : * 0.0
+T : placement : 25 : 1 0.25
+T : placement : 25 : 2 0.25
+T : placement : 25 : 3 0.25
+T : placement : 25 : 4 0.25
+R : north : 25 : * : * 0.0
+T : north : 25 : 30 0.9
+T : north : 25 : 59 0.1
+R : south : 25 : * : * 0.0
+T : south : 25 : 8 0.9
+T : south : 25 : 34 0.1
+R : east : 25 : * : * 0.0
+T : east : 25 : 26 1.0
+R : west : 25 : * : * 0.0
+T : west : 25 : 5 0.9
+T : west : 25 : 27 0.1
+T : finish : 25 : 25 1.0
+
+R : placement : 26 : * : * 0.0
+T : placement : 26 : 1 0.25
+T : placement : 26 : 2 0.25
+T : placement : 26 : 3 0.25
+T : placement : 26 : 4 0.25
+R : north : 26 : * : * 0.0
+T : north : 26 : 31 0.9
+T : north : 26 : 60 0.1
+R : south : 26 : * : * 0.0
+T : south : 26 : 9 0.9
+T : south : 26 : 35 0.1
+R : east : 26 : * : * 0.0
+T : east : 26 : 26 1.0
+R : west : 26 : * : * 0.0
+T : west : 26 : 5 0.1
+T : west : 26 : 25 0.9
+T : finish : 26 : 26 1.0
+
+R : placement : 27 : * : * 0.0
+T : placement : 27 : 1 0.25
+T : placement : 27 : 2 0.25
+T : placement : 27 : 3 0.25
+T : placement : 27 : 4 0.25
+R : north : 27 : * : * 0.0
+T : north : 27 : 32 0.9
+T : north : 27 : 61 0.1
+R : south : 27 : * : * 0.0
+T : south : 27 : 10 0.9
+T : south : 27 : 36 0.1
+R : east : 27 : * : * 0.0
+T : east : 27 : 5 0.9
+T : east : 27 : 25 0.1
+R : west : 27 : * : * 0.0
+T : west : 27 : 28 0.9
+T : west : 27 : 63 0.1
+T : finish : 27 : 27 1.0
+
+R : placement : 28 : * : * 0.0
+T : placement : 28 : 1 0.25
+T : placement : 28 : 2 0.25
+T : placement : 28 : 3 0.25
+T : placement : 28 : 4 0.25
+R : north : 28 : * : * 0.0
+T : north : 28 : 33 0.9
+T : north : 28 : 62 0.1
+R : south : 28 : * : * 0.0
+T : south : 28 : 11 0.9
+T : south : 28 : 37 0.1
+R : east : 28 : * : * 0.0
+T : east : 28 : 5 0.1
+T : east : 28 : 27 0.9
+R : west : 28 : * : * 0.0
+T : west : 28 : 63 0.9
+T : west : 28 : 64 0.1
+T : finish : 28 : 28 1.0
+
+R : placement : 29 : * : * 0.0
+T : placement : 29 : 1 0.25
+T : placement : 29 : 2 0.25
+T : placement : 29 : 3 0.25
+T : placement : 29 : 4 0.25
+R : north : 29 : * : * 0.0
+T : north : 29 : 58 0.9
+T : north : 29 : 65 0.1
+R : south : 29 : * : * 0.0
+T : south : 29 : 6 0.1
+T : south : 29 : 24 0.9
+R : east : 29 : * : * 0.0
+T : east : 29 : 66 0.9
+T : east : 29 : 67 0.1
+R : west : 29 : * : * 0.0
+T : west : 29 : 68 0.9
+T : west : 29 : 69 0.1
+T : finish : 29 : 29 1.0
+
+R : placement : 30 : * : * 0.0
+T : placement : 30 : 1 0.25
+T : placement : 30 : 2 0.25
+T : placement : 30 : 3 0.25
+T : placement : 30 : 4 0.25
+R : north : 30 : * : * 0.0
+T : north : 30 : 59 0.9
+T : north : 30 : 66 0.1
+R : south : 30 : * : * 0.0
+T : south : 30 : 8 0.1
+T : south : 30 : 25 0.9
+R : east : 30 : * : * 0.0
+T : east : 30 : 31 1.0
+R : west : 30 : * : * 0.0
+T : west : 30 : 6 0.9
+T : west : 30 : 32 0.1
+T : finish : 30 : 30 1.0
+
+R : placement : 31 : * : * 0.0
+T : placement : 31 : 1 0.25
+T : placement : 31 : 2 0.25
+T : placement : 31 : 3 0.25
+T : placement : 31 : 4 0.25
+R : north : 31 : * : * 0.0
+T : north : 31 : 60 0.9
+T : north : 31 : 67 0.1
+R : south : 31 : * : * 0.0
+T : south : 31 : 9 0.1
+T : south : 31 : 26 0.9
+R : east : 31 : * : * 0.0
+T : east : 31 : 31 1.0
+R : west : 31 : * : * 0.0
+T : west : 31 : 6 0.1
+T : west : 31 : 30 0.9
+T : finish : 31 : 31 1.0
+
+R : placement : 32 : * : * 0.0
+T : placement : 32 : 1 0.25
+T : placement : 32 : 2 0.25
+T : placement : 32 : 3 0.25
+T : placement : 32 : 4 0.25
+R : north : 32 : * : * 0.0
+T : north : 32 : 61 0.9
+T : north : 32 : 68 0.1
+R : south : 32 : * : * 0.0
+T : south : 32 : 10 0.1
+T : south : 32 : 27 0.9
+R : east : 32 : * : * 0.0
+T : east : 32 : 6 0.9
+T : east : 32 : 30 0.1
+R : west : 32 : * : * 0.0
+T : west : 32 : 33 0.9
+T : west : 32 : 70 0.1
+T : finish : 32 : 32 1.0
+
+R : placement : 33 : * : * 0.0
+T : placement : 33 : 1 0.25
+T : placement : 33 : 2 0.25
+T : placement : 33 : 3 0.25
+T : placement : 33 : 4 0.25
+R : north : 33 : * : * 0.0
+T : north : 33 : 62 0.9
+T : north : 33 : 69 0.1
+R : south : 33 : * : * 0.0
+T : south : 33 : 11 0.1
+T : south : 33 : 28 0.9
+R : east : 33 : * : * 0.0
+T : east : 33 : 6 0.1
+T : east : 33 : 32 0.9
+R : west : 33 : * : * 0.0
+T : west : 33 : 70 0.9
+T : west : 33 : 71 0.1
+T : finish : 33 : 33 1.0
+
+R : placement : 34 : * : * 0.0
+T : placement : 34 : 1 0.25
+T : placement : 34 : 2 0.25
+T : placement : 34 : 3 0.25
+T : placement : 34 : 4 0.25
+R : north : 34 : * : * 0.0
+T : north : 34 : 8 0.9
+T : north : 34 : 25 0.1
+R : south : 34 : * : * 0.0
+T : south : 34 : 34 1.0
+R : east : 34 : * : * 0.0
+T : east : 34 : 35 1.0
+R : west : 34 : * : * 0.0
+T : west : 34 : 7 0.9
+T : west : 34 : 36 0.1
+T : finish : 34 : 34 1.0
+
+R : placement : 35 : * : * 0.0
+T : placement : 35 : 1 0.25
+T : placement : 35 : 2 0.25
+T : placement : 35 : 3 0.25
+T : placement : 35 : 4 0.25
+R : north : 35 : * : * 0.0
+T : north : 35 : 9 0.9
+T : north : 35 : 26 0.1
+R : south : 35 : * : * 0.0
+T : south : 35 : 35 1.0
+R : east : 35 : * : * 0.0
+T : east : 35 : 35 1.0
+R : west : 35 : * : * 0.0
+T : west : 35 : 7 0.1
+T : west : 35 : 34 0.9
+R : finish : 35 : * : * 20.0
+T : finish : 35 : 72 1.0
+
+R : placement : 36 : * : * 0.0
+T : placement : 36 : 1 0.25
+T : placement : 36 : 2 0.25
+T : placement : 36 : 3 0.25
+T : placement : 36 : 4 0.25
+R : north : 36 : * : * 0.0
+T : north : 36 : 10 0.9
+T : north : 36 : 27 0.1
+R : south : 36 : * : * 0.0
+T : south : 36 : 36 1.0
+R : east : 36 : * : * 0.0
+T : east : 36 : 7 0.9
+T : east : 36 : 34 0.1
+R : west : 36 : * : * 0.0
+T : west : 36 : 37 0.9
+T : west : 36 : 73 0.1
+T : finish : 36 : 36 1.0
+
+R : placement : 37 : * : * 0.0
+T : placement : 37 : 1 0.25
+T : placement : 37 : 2 0.25
+T : placement : 37 : 3 0.25
+T : placement : 37 : 4 0.25
+R : north : 37 : * : * 0.0
+T : north : 37 : 11 0.9
+T : north : 37 : 28 0.1
+R : south : 37 : * : * 0.0
+T : south : 37 : 37 1.0
+R : east : 37 : * : * 0.0
+T : east : 37 : 7 0.1
+T : east : 37 : 36 0.9
+R : west : 37 : * : * 0.0
+T : west : 37 : 73 0.9
+T : west : 37 : 74 0.1
+T : finish : 37 : 37 1.0
+
+R : placement : 38 : * : * 0.0
+T : placement : 38 : 1 0.25
+T : placement : 38 : 2 0.25
+T : placement : 38 : 3 0.25
+T : placement : 38 : 4 0.25
+R : north : 38 : * : * 0.0
+T : north : 38 : 63 0.9
+T : north : 38 : 70 0.1
+R : south : 38 : * : * 0.0
+T : south : 38 : 73 1.0
+R : east : 38 : * : * 0.0
+T : east : 38 : 10 0.1
+T : east : 38 : 11 0.9
+R : west : 38 : * : * 0.0
+T : west : 38 : 39 0.9
+T : west : 38 : 75 0.1
+T : finish : 38 : 38 1.0
+
+R : placement : 39 : * : * 0.0
+T : placement : 39 : 1 0.25
+T : placement : 39 : 2 0.25
+T : placement : 39 : 3 0.25
+T : placement : 39 : 4 0.25
+R : north : 39 : * : * 0.0
+T : north : 39 : 64 0.9
+T : north : 39 : 71 0.1
+R : south : 39 : * : * 0.0
+T : south : 39 : 74 1.0
+R : east : 39 : * : * 0.0
+T : east : 39 : 11 0.1
+T : east : 39 : 38 0.9
+R : west : 39 : * : * 0.0
+T : west : 39 : 75 0.9
+T : west : 39 : 76 0.1
+T : finish : 39 : 39 1.0
+
+R : placement : 40 : * : * 0.0
+T : placement : 40 : 1 0.25
+T : placement : 40 : 2 0.25
+T : placement : 40 : 3 0.25
+T : placement : 40 : 4 0.25
+R : north : 40 : * : * 0.0
+T : north : 40 : 40 1.0
+R : south : 40 : * : * 0.0
+T : south : 40 : 14 0.9
+T : south : 40 : 42 0.1
+R : east : 40 : * : * 0.0
+T : east : 40 : 45 0.9
+T : east : 40 : 77 0.1
+R : west : 40 : * : * 0.0
+T : west : 40 : 12 0.1
+T : west : 40 : 16 0.9
+T : finish : 40 : 40 1.0
+
+R : placement : 41 : * : * 0.0
+T : placement : 41 : 1 0.25
+T : placement : 41 : 2 0.25
+T : placement : 41 : 3 0.25
+T : placement : 41 : 4 0.25
+R : north : 41 : * : * 0.0
+T : north : 41 : 41 1.0
+R : south : 41 : * : * 0.0
+T : south : 41 : 15 0.9
+T : south : 41 : 43 0.1
+R : east : 41 : * : * 0.0
+T : east : 41 : 12 0.9
+T : east : 41 : 16 0.1
+R : west : 41 : * : * 0.0
+T : west : 41 : 41 1.0
+T : finish : 41 : 41 1.0
+
+R : placement : 42 : * : * 0.0
+T : placement : 42 : 1 0.25
+T : placement : 42 : 2 0.25
+T : placement : 42 : 3 0.25
+T : placement : 42 : 4 0.25
+R : north : 42 : * : * 0.0
+T : north : 42 : 14 0.9
+T : north : 42 : 40 0.1
+R : south : 42 : * : * 0.0
+T : south : 42 : 22 0.9
+T : south : 42 : 52 0.1
+R : east : 42 : * : * 0.0
+T : east : 42 : 47 0.9
+T : east : 42 : 78 0.1
+R : west : 42 : * : * 0.0
+T : west : 42 : 13 0.1
+T : west : 42 : 17 0.9
+T : finish : 42 : 42 1.0
+
+R : placement : 43 : * : * 0.0
+T : placement : 43 : 1 0.25
+T : placement : 43 : 2 0.25
+T : placement : 43 : 3 0.25
+T : placement : 43 : 4 0.25
+R : north : 43 : * : * 0.0
+T : north : 43 : 15 0.9
+T : north : 43 : 41 0.1
+R : south : 43 : * : * 0.0
+T : south : 43 : 23 0.9
+T : south : 43 : 53 0.1
+R : east : 43 : * : * 0.0
+T : east : 43 : 13 0.9
+T : east : 43 : 17 0.1
+R : west : 43 : * : * 0.0
+T : west : 43 : 43 1.0
+T : finish : 43 : 43 1.0
+
+R : placement : 44 : * : * 0.0
+T : placement : 44 : 1 0.25
+T : placement : 44 : 2 0.25
+T : placement : 44 : 3 0.25
+T : placement : 44 : 4 0.25
+R : north : 44 : * : * 0.0
+T : north : 44 : 77 1.0
+R : south : 44 : * : * 0.0
+T : south : 44 : 57 0.1
+T : south : 44 : 78 0.9
+R : east : 44 : * : * 0.0
+T : east : 44 : 50 0.9
+T : east : 44 : 79 0.1
+R : west : 44 : * : * 0.0
+T : west : 44 : 14 0.1
+T : west : 44 : 19 0.9
+T : finish : 44 : 44 1.0
+
+R : placement : 45 : * : * 0.0
+T : placement : 45 : 1 0.25
+T : placement : 45 : 2 0.25
+T : placement : 45 : 3 0.25
+T : placement : 45 : 4 0.25
+R : north : 45 : * : * 0.0
+T : north : 45 : 45 1.0
+R : south : 45 : * : * 0.0
+T : south : 45 : 19 0.9
+T : south : 45 : 47 0.1
+R : east : 45 : * : * 0.0
+T : east : 45 : 77 0.9
+T : east : 45 : 80 0.1
+R : west : 45 : * : * 0.0
+T : west : 45 : 16 0.1
+T : west : 45 : 40 0.9
+T : finish : 45 : 45 1.0
+
+R : placement : 46 : * : * 0.0
+T : placement : 46 : 1 0.25
+T : placement : 46 : 2 0.25
+T : placement : 46 : 3 0.25
+T : placement : 46 : 4 0.25
+R : north : 46 : * : * 0.0
+T : north : 46 : 17 0.1
+T : north : 46 : 18 0.9
+R : south : 46 : * : * 0.0
+T : south : 46 : 48 0.9
+T : south : 46 : 81 0.1
+R : east : 46 : * : * 0.0
+T : east : 46 : 52 0.9
+T : east : 46 : 82 0.1
+R : west : 46 : * : * 0.0
+T : west : 46 : 20 0.9
+T : west : 46 : 53 0.1
+T : finish : 46 : 46 1.0
+
+R : placement : 47 : * : * 0.0
+T : placement : 47 : 1 0.25
+T : placement : 47 : 2 0.25
+T : placement : 47 : 3 0.25
+T : placement : 47 : 4 0.25
+R : north : 47 : * : * 0.0
+T : north : 47 : 19 0.9
+T : north : 47 : 45 0.1
+R : south : 47 : * : * 0.0
+T : south : 47 : 49 0.9
+T : south : 47 : 82 0.1
+R : east : 47 : * : * 0.0
+T : east : 47 : 78 0.9
+T : east : 47 : 83 0.1
+R : west : 47 : * : * 0.0
+T : west : 47 : 17 0.1
+T : west : 47 : 42 0.9
+T : finish : 47 : 47 1.0
+
+R : placement : 48 : * : * 0.0
+T : placement : 48 : 1 0.25
+T : placement : 48 : 2 0.25
+T : placement : 48 : 3 0.25
+T : placement : 48 : 4 0.25
+R : north : 48 : * : * 0.0
+T : north : 48 : 18 0.1
+T : north : 48 : 46 0.9
+R : south : 48 : * : * 0.0
+T : south : 48 : 81 0.9
+T : south : 48 : 84 0.1
+R : east : 48 : * : * 0.0
+T : east : 48 : 55 0.9
+T : east : 48 : 85 0.1
+R : west : 48 : * : * 0.0
+T : west : 48 : 21 0.9
+T : west : 48 : 56 0.1
+T : finish : 48 : 48 1.0
+
+R : placement : 49 : * : * 0.0
+T : placement : 49 : 1 0.25
+T : placement : 49 : 2 0.25
+T : placement : 49 : 3 0.25
+T : placement : 49 : 4 0.25
+R : north : 49 : * : * 0.0
+T : north : 49 : 19 0.1
+T : north : 49 : 47 0.9
+R : south : 49 : * : * 0.0
+T : south : 49 : 82 0.9
+T : south : 49 : 85 0.1
+R : east : 49 : * : * 0.0
+T : east : 49 : 57 0.9
+T : east : 49 : 86 0.1
+R : west : 49 : * : * 0.0
+T : west : 49 : 18 0.1
+T : west : 49 : 22 0.9
+T : finish : 49 : 49 1.0
+
+R : placement : 50 : * : * 0.0
+T : placement : 50 : 1 0.25
+T : placement : 50 : 2 0.25
+T : placement : 50 : 3 0.25
+T : placement : 50 : 4 0.25
+R : north : 50 : * : * 0.0
+T : north : 50 : 80 1.0
+R : south : 50 : * : * 0.0
+T : south : 50 : 83 0.9
+T : south : 50 : 86 0.1
+R : east : 50 : * : * 0.0
+T : east : 50 : 79 0.9
+T : east : 50 : 87 0.1
+R : west : 50 : * : * 0.0
+T : west : 50 : 19 0.1
+T : west : 50 : 44 0.9
+T : finish : 50 : 50 1.0
+
+R : placement : 51 : * : * 0.0
+T : placement : 51 : 1 0.25
+T : placement : 51 : 2 0.25
+T : placement : 51 : 3 0.25
+T : placement : 51 : 4 0.25
+R : north : 51 : * : * 0.0
+T : north : 51 : 20 0.1
+T : north : 51 : 21 0.9
+R : south : 51 : * : * 0.0
+T : south : 51 : 54 0.9
+T : south : 51 : 76 0.1
+R : east : 51 : * : * 0.0
+T : east : 51 : 71 0.1
+T : east : 51 : 81 0.9
+R : west : 51 : * : * 0.0
+T : west : 51 : 88 1.0
+T : finish : 51 : 51 1.0
+
+R : placement : 52 : * : * 0.0
+T : placement : 52 : 1 0.25
+T : placement : 52 : 2 0.25
+T : placement : 52 : 3 0.25
+T : placement : 52 : 4 0.25
+R : north : 52 : * : * 0.0
+T : north : 52 : 22 0.9
+T : north : 52 : 42 0.1
+R : south : 52 : * : * 0.0
+T : south : 52 : 55 0.9
+T : south : 52 : 71 0.1
+R : east : 52 : * : * 0.0
+T : east : 52 : 69 0.1
+T : east : 52 : 82 0.9
+R : west : 52 : * : * 0.0
+T : west : 52 : 20 0.1
+T : west : 52 : 46 0.9
+T : finish : 52 : 52 1.0
+
+R : placement : 53 : * : * 0.0
+T : placement : 53 : 1 0.25
+T : placement : 53 : 2 0.25
+T : placement : 53 : 3 0.25
+T : placement : 53 : 4 0.25
+R : north : 53 : * : * 0.0
+T : north : 53 : 23 0.9
+T : north : 53 : 43 0.1
+R : south : 53 : * : * 0.0
+T : south : 53 : 56 0.9
+T : south : 53 : 88 0.1
+R : east : 53 : * : * 0.0
+T : east : 53 : 20 0.9
+T : east : 53 : 46 0.1
+R : west : 53 : * : * 0.0
+T : west : 53 : 53 1.0
+T : finish : 53 : 53 1.0
+
+R : placement : 54 : * : * 0.0
+T : placement : 54 : 1 0.25
+T : placement : 54 : 2 0.25
+T : placement : 54 : 3 0.25
+T : placement : 54 : 4 0.25
+R : north : 54 : * : * 0.0
+T : north : 54 : 21 0.1
+T : north : 54 : 51 0.9
+R : south : 54 : * : * 0.0
+T : south : 54 : 76 0.9
+T : south : 54 : 89 0.1
+R : east : 54 : * : * 0.0
+T : east : 54 : 64 0.1
+T : east : 54 : 84 0.9
+R : west : 54 : * : * 0.0
+T : west : 54 : 90 1.0
+T : finish : 54 : 54 1.0
+
+R : placement : 55 : * : * 0.0
+T : placement : 55 : 1 0.25
+T : placement : 55 : 2 0.25
+T : placement : 55 : 3 0.25
+T : placement : 55 : 4 0.25
+R : north : 55 : * : * 0.0
+T : north : 55 : 22 0.1
+T : north : 55 : 52 0.9
+R : south : 55 : * : * 0.0
+T : south : 55 : 64 0.1
+T : south : 55 : 71 0.9
+R : east : 55 : * : * 0.0
+T : east : 55 : 62 0.1
+T : east : 55 : 85 0.9
+R : west : 55 : * : * 0.0
+T : west : 55 : 21 0.1
+T : west : 55 : 48 0.9
+T : finish : 55 : 55 1.0
+
+R : placement : 56 : * : * 0.0
+T : placement : 56 : 1 0.25
+T : placement : 56 : 2 0.25
+T : placement : 56 : 3 0.25
+T : placement : 56 : 4 0.25
+R : north : 56 : * : * 0.0
+T : north : 56 : 23 0.1
+T : north : 56 : 53 0.9
+R : south : 56 : * : * 0.0
+T : south : 56 : 88 0.9
+T : south : 56 : 90 0.1
+R : east : 56 : * : * 0.0
+T : east : 56 : 21 0.9
+T : east : 56 : 48 0.1
+R : west : 56 : * : * 0.0
+T : west : 56 : 56 1.0
+T : finish : 56 : 56 1.0
+
+R : placement : 57 : * : * 0.0
+T : placement : 57 : 1 0.25
+T : placement : 57 : 2 0.25
+T : placement : 57 : 3 0.25
+T : placement : 57 : 4 0.25
+R : north : 57 : * : * 0.0
+T : north : 57 : 44 0.1
+T : north : 57 : 78 0.9
+R : south : 57 : * : * 0.0
+T : south : 57 : 62 0.1
+T : south : 57 : 69 0.9
+R : east : 57 : * : * 0.0
+T : east : 57 : 58 0.1
+T : east : 57 : 86 0.9
+R : west : 57 : * : * 0.0
+T : west : 57 : 22 0.1
+T : west : 57 : 49 0.9
+T : finish : 57 : 57 1.0
+
+R : placement : 58 : * : * 0.0
+T : placement : 58 : 1 0.25
+T : placement : 58 : 2 0.25
+T : placement : 58 : 3 0.25
+T : placement : 58 : 4 0.25
+R : north : 58 : * : * 0.0
+T : north : 58 : 65 0.9
+T : north : 58 : 79 0.1
+R : south : 58 : * : * 0.0
+T : south : 58 : 24 0.1
+T : south : 58 : 29 0.9
+R : east : 58 : * : * 0.0
+T : east : 58 : 91 0.9
+T : east : 58 : 92 0.1
+R : west : 58 : * : * 0.0
+T : west : 58 : 57 0.1
+T : west : 58 : 86 0.9
+T : finish : 58 : 58 1.0
+
+R : placement : 59 : * : * 0.0
+T : placement : 59 : 1 0.25
+T : placement : 59 : 2 0.25
+T : placement : 59 : 3 0.25
+T : placement : 59 : 4 0.25
+R : north : 59 : * : * 0.0
+T : north : 59 : 66 0.9
+T : north : 59 : 91 0.1
+R : south : 59 : * : * 0.0
+T : south : 59 : 25 0.1
+T : south : 59 : 30 0.9
+R : east : 59 : * : * 0.0
+T : east : 59 : 60 1.0
+R : west : 59 : * : * 0.0
+T : west : 59 : 24 0.9
+T : west : 59 : 61 0.1
+T : finish : 59 : 59 1.0
+
+R : placement : 60 : * : * 0.0
+T : placement : 60 : 1 0.25
+T : placement : 60 : 2 0.25
+T : placement : 60 : 3 0.25
+T : placement : 60 : 4 0.25
+R : north : 60 : * : * 0.0
+T : north : 60 : 67 0.9
+T : north : 60 : 92 0.1
+R : south : 60 : * : * 0.0
+T : south : 60 : 26 0.1
+T : south : 60 : 31 0.9
+R : east : 60 : * : * 0.0
+T : east : 60 : 60 1.0
+R : west : 60 : * : * 0.0
+T : west : 60 : 24 0.1
+T : west : 60 : 59 0.9
+T : finish : 60 : 60 1.0
+
+R : placement : 61 : * : * 0.0
+T : placement : 61 : 1 0.25
+T : placement : 61 : 2 0.25
+T : placement : 61 : 3 0.25
+T : placement : 61 : 4 0.25
+R : north : 61 : * : * 0.0
+T : north : 61 : 68 0.9
+T : north : 61 : 86 0.1
+R : south : 61 : * : * 0.0
+T : south : 61 : 27 0.1
+T : south : 61 : 32 0.9
+R : east : 61 : * : * 0.0
+T : east : 61 : 24 0.9
+T : east : 61 : 59 0.1
+R : west : 61 : * : * 0.0
+T : west : 61 : 62 0.9
+T : west : 61 : 85 0.1
+T : finish : 61 : 61 1.0
+
+R : placement : 62 : * : * 0.0
+T : placement : 62 : 1 0.25
+T : placement : 62 : 2 0.25
+T : placement : 62 : 3 0.25
+T : placement : 62 : 4 0.25
+R : north : 62 : * : * 0.0
+T : north : 62 : 57 0.1
+T : north : 62 : 69 0.9
+R : south : 62 : * : * 0.0
+T : south : 62 : 28 0.1
+T : south : 62 : 33 0.9
+R : east : 62 : * : * 0.0
+T : east : 62 : 24 0.1
+T : east : 62 : 61 0.9
+R : west : 62 : * : * 0.0
+T : west : 62 : 55 0.1
+T : west : 62 : 85 0.9
+T : finish : 62 : 62 1.0
+
+R : placement : 63 : * : * 0.0
+T : placement : 63 : 1 0.25
+T : placement : 63 : 2 0.25
+T : placement : 63 : 3 0.25
+T : placement : 63 : 4 0.25
+R : north : 63 : * : * 0.0
+T : north : 63 : 70 0.9
+T : north : 63 : 85 0.1
+R : south : 63 : * : * 0.0
+T : south : 63 : 38 0.9
+T : south : 63 : 73 0.1
+R : east : 63 : * : * 0.0
+T : east : 63 : 27 0.1
+T : east : 63 : 28 0.9
+R : west : 63 : * : * 0.0
+T : west : 63 : 64 0.9
+T : west : 63 : 84 0.1
+T : finish : 63 : 63 1.0
+
+R : placement : 64 : * : * 0.0
+T : placement : 64 : 1 0.25
+T : placement : 64 : 2 0.25
+T : placement : 64 : 3 0.25
+T : placement : 64 : 4 0.25
+R : north : 64 : * : * 0.0
+T : north : 64 : 55 0.1
+T : north : 64 : 71 0.9
+R : south : 64 : * : * 0.0
+T : south : 64 : 39 0.9
+T : south : 64 : 74 0.1
+R : east : 64 : * : * 0.0
+T : east : 64 : 28 0.1
+T : east : 64 : 63 0.9
+R : west : 64 : * : * 0.0
+T : west : 64 : 54 0.1
+T : west : 64 : 84 0.9
+T : finish : 64 : 64 1.0
+
+R : placement : 65 : * : * 0.0
+T : placement : 65 : 1 0.25
+T : placement : 65 : 2 0.25
+T : placement : 65 : 3 0.25
+T : placement : 65 : 4 0.25
+R : north : 65 : * : * 0.0
+T : north : 65 : 79 0.9
+T : north : 65 : 93 0.1
+R : south : 65 : * : * 0.0
+T : south : 65 : 29 0.1
+T : south : 65 : 58 0.9
+R : east : 65 : * : * 0.0
+T : east : 65 : 94 0.9
+T : east : 65 : 95 0.1
+R : west : 65 : * : * 0.0
+T : west : 65 : 78 0.1
+T : west : 65 : 83 0.9
+T : finish : 65 : 65 1.0
+
+R : placement : 66 : * : * 0.0
+T : placement : 66 : 1 0.25
+T : placement : 66 : 2 0.25
+T : placement : 66 : 3 0.25
+T : placement : 66 : 4 0.25
+R : north : 66 : * : * 0.0
+T : north : 66 : 91 0.9
+T : north : 66 : 94 0.1
+R : south : 66 : * : * 0.0
+T : south : 66 : 30 0.1
+T : south : 66 : 59 0.9
+R : east : 66 : * : * 0.0
+T : east : 66 : 67 1.0
+R : west : 66 : * : * 0.0
+T : west : 66 : 29 0.9
+T : west : 66 : 68 0.1
+T : finish : 66 : 66 1.0
+
+R : placement : 67 : * : * 0.0
+T : placement : 67 : 1 0.25
+T : placement : 67 : 2 0.25
+T : placement : 67 : 3 0.25
+T : placement : 67 : 4 0.25
+R : north : 67 : * : * 0.0
+T : north : 67 : 92 0.9
+T : north : 67 : 95 0.1
+R : south : 67 : * : * 0.0
+T : south : 67 : 31 0.1
+T : south : 67 : 60 0.9
+R : east : 67 : * : * 0.0
+T : east : 67 : 67 1.0
+R : west : 67 : * : * 0.0
+T : west : 67 : 29 0.1
+T : west : 67 : 66 0.9
+T : finish : 67 : 67 1.0
+
+R : placement : 68 : * : * 0.0
+T : placement : 68 : 1 0.25
+T : placement : 68 : 2 0.25
+T : placement : 68 : 3 0.25
+T : placement : 68 : 4 0.25
+R : north : 68 : * : * 0.0
+T : north : 68 : 83 0.1
+T : north : 68 : 86 0.9
+R : south : 68 : * : * 0.0
+T : south : 68 : 32 0.1
+T : south : 68 : 61 0.9
+R : east : 68 : * : * 0.0
+T : east : 68 : 29 0.9
+T : east : 68 : 66 0.1
+R : west : 68 : * : * 0.0
+T : west : 68 : 69 0.9
+T : west : 68 : 82 0.1
+T : finish : 68 : 68 1.0
+
+R : placement : 69 : * : * 0.0
+T : placement : 69 : 1 0.25
+T : placement : 69 : 2 0.25
+T : placement : 69 : 3 0.25
+T : placement : 69 : 4 0.25
+R : north : 69 : * : * 0.0
+T : north : 69 : 57 0.9
+T : north : 69 : 78 0.1
+R : south : 69 : * : * 0.0
+T : south : 69 : 33 0.1
+T : south : 69 : 62 0.9
+R : east : 69 : * : * 0.0
+T : east : 69 : 29 0.1
+T : east : 69 : 68 0.9
+R : west : 69 : * : * 0.0
+T : west : 69 : 52 0.1
+T : west : 69 : 82 0.9
+T : finish : 69 : 69 1.0
+
+R : placement : 70 : * : * 0.0
+T : placement : 70 : 1 0.25
+T : placement : 70 : 2 0.25
+T : placement : 70 : 3 0.25
+T : placement : 70 : 4 0.25
+R : north : 70 : * : * 0.0
+T : north : 70 : 82 0.1
+T : north : 70 : 85 0.9
+R : south : 70 : * : * 0.0
+T : south : 70 : 38 0.1
+T : south : 70 : 63 0.9
+R : east : 70 : * : * 0.0
+T : east : 70 : 32 0.1
+T : east : 70 : 33 0.9
+R : west : 70 : * : * 0.0
+T : west : 70 : 71 0.9
+T : west : 70 : 81 0.1
+T : finish : 70 : 70 1.0
+
+R : placement : 71 : * : * 0.0
+T : placement : 71 : 1 0.25
+T : placement : 71 : 2 0.25
+T : placement : 71 : 3 0.25
+T : placement : 71 : 4 0.25
+R : north : 71 : * : * 0.0
+T : north : 71 : 52 0.1
+T : north : 71 : 55 0.9
+R : south : 71 : * : * 0.0
+T : south : 71 : 39 0.1
+T : south : 71 : 64 0.9
+R : east : 71 : * : * 0.0
+T : east : 71 : 33 0.1
+T : east : 71 : 70 0.9
+R : west : 71 : * : * 0.0
+T : west : 71 : 51 0.1
+T : west : 71 : 81 0.9
+T : finish : 71 : 71 1.0
+
+R : * : 72 : * : * 0.0
+T : * : 72 : 72 1.0
+
+R : placement : 73 : * : * 0.0
+T : placement : 73 : 1 0.25
+T : placement : 73 : 2 0.25
+T : placement : 73 : 3 0.25
+T : placement : 73 : 4 0.25
+R : north : 73 : * : * 0.0
+T : north : 73 : 38 0.9
+T : north : 73 : 63 0.1
+R : south : 73 : * : * 0.0
+T : south : 73 : 73 1.0
+R : east : 73 : * : * 0.0
+T : east : 73 : 36 0.1
+T : east : 73 : 37 0.9
+R : west : 73 : * : * 0.0
+T : west : 73 : 74 0.9
+T : west : 73 : 96 0.1
+T : finish : 73 : 73 1.0
+
+R : placement : 74 : * : * 0.0
+T : placement : 74 : 1 0.25
+T : placement : 74 : 2 0.25
+T : placement : 74 : 3 0.25
+T : placement : 74 : 4 0.25
+R : north : 74 : * : * 0.0
+T : north : 74 : 39 0.9
+T : north : 74 : 64 0.1
+R : south : 74 : * : * 0.0
+T : south : 74 : 74 1.0
+R : east : 74 : * : * 0.0
+T : east : 74 : 37 0.1
+T : east : 74 : 73 0.9
+R : west : 74 : * : * 0.0
+T : west : 74 : 89 0.1
+T : west : 74 : 96 0.9
+T : finish : 74 : 74 1.0
+
+R : placement : 75 : * : * 0.0
+T : placement : 75 : 1 0.25
+T : placement : 75 : 2 0.25
+T : placement : 75 : 3 0.25
+T : placement : 75 : 4 0.25
+R : north : 75 : * : * 0.0
+T : north : 75 : 81 0.1
+T : north : 75 : 84 0.9
+R : south : 75 : * : * 0.0
+T : south : 75 : 96 1.0
+R : east : 75 : * : * 0.0
+T : east : 75 : 38 0.1
+T : east : 75 : 39 0.9
+R : west : 75 : * : * 0.0
+T : west : 75 : 76 0.9
+T : west : 75 : 97 0.1
+T : finish : 75 : 75 1.0
+
+R : placement : 76 : * : * 0.0
+T : placement : 76 : 1 0.25
+T : placement : 76 : 2 0.25
+T : placement : 76 : 3 0.25
+T : placement : 76 : 4 0.25
+R : north : 76 : * : * 0.0
+T : north : 76 : 51 0.1
+T : north : 76 : 54 0.9
+R : south : 76 : * : * 0.0
+T : south : 76 : 89 1.0
+R : east : 76 : * : * 0.0
+T : east : 76 : 39 0.1
+T : east : 76 : 75 0.9
+R : west : 76 : * : * 0.0
+T : west : 76 : 97 1.0
+T : finish : 76 : 76 1.0
+
+R : placement : 77 : * : * 0.0
+T : placement : 77 : 1 0.25
+T : placement : 77 : 2 0.25
+T : placement : 77 : 3 0.25
+T : placement : 77 : 4 0.25
+R : north : 77 : * : * 0.0
+T : north : 77 : 77 1.0
+R : south : 77 : * : * 0.0
+T : south : 77 : 44 0.9
+T : south : 77 : 78 0.1
+R : east : 77 : * : * 0.0
+T : east : 77 : 80 0.9
+T : east : 77 : 93 0.1
+R : west : 77 : * : * 0.0
+T : west : 77 : 40 0.1
+T : west : 77 : 45 0.9
+T : finish : 77 : 77 1.0
+
+R : placement : 78 : * : * 0.0
+T : placement : 78 : 1 0.25
+T : placement : 78 : 2 0.25
+T : placement : 78 : 3 0.25
+T : placement : 78 : 4 0.25
+R : north : 78 : * : * 0.0
+T : north : 78 : 44 0.9
+T : north : 78 : 77 0.1
+R : south : 78 : * : * 0.0
+T : south : 78 : 57 0.9
+T : south : 78 : 69 0.1
+R : east : 78 : * : * 0.0
+T : east : 78 : 65 0.1
+T : east : 78 : 83 0.9
+R : west : 78 : * : * 0.0
+T : west : 78 : 42 0.1
+T : west : 78 : 47 0.9
+T : finish : 78 : 78 1.0
+
+R : placement : 79 : * : * 0.0
+T : placement : 79 : 1 0.25
+T : placement : 79 : 2 0.25
+T : placement : 79 : 3 0.25
+T : placement : 79 : 4 0.25
+R : north : 79 : * : * 0.0
+T : north : 79 : 93 1.0
+R : south : 79 : * : * 0.0
+T : south : 79 : 58 0.1
+T : south : 79 : 65 0.9
+R : east : 79 : * : * 0.0
+T : east : 79 : 87 0.9
+T : east : 79 : 98 0.1
+R : west : 79 : * : * 0.0
+T : west : 79 : 44 0.1
+T : west : 79 : 50 0.9
+T : finish : 79 : 79 1.0
+
+R : placement : 80 : * : * 0.0
+T : placement : 80 : 1 0.25
+T : placement : 80 : 2 0.25
+T : placement : 80 : 3 0.25
+T : placement : 80 : 4 0.25
+R : north : 80 : * : * 0.0
+T : north : 80 : 80 1.0
+R : south : 80 : * : * 0.0
+T : south : 80 : 50 0.9
+T : south : 80 : 83 0.1
+R : east : 80 : * : * 0.0
+T : east : 80 : 93 0.9
+T : east : 80 : 99 0.1
+R : west : 80 : * : * 0.0
+T : west : 80 : 45 0.1
+T : west : 80 : 77 0.9
+T : finish : 80 : 80 1.0
+
+R : placement : 81 : * : * 0.0
+T : placement : 81 : 1 0.25
+T : placement : 81 : 2 0.25
+T : placement : 81 : 3 0.25
+T : placement : 81 : 4 0.25
+R : north : 81 : * : * 0.0
+T : north : 81 : 46 0.1
+T : north : 81 : 48 0.9
+R : south : 81 : * : * 0.0
+T : south : 81 : 75 0.1
+T : south : 81 : 84 0.9
+R : east : 81 : * : * 0.0
+T : east : 81 : 70 0.1
+T : east : 81 : 71 0.9
+R : west : 81 : * : * 0.0
+T : west : 81 : 51 0.9
+T : west : 81 : 88 0.1
+T : finish : 81 : 81 1.0
+
+R : placement : 82 : * : * 0.0
+T : placement : 82 : 1 0.25
+T : placement : 82 : 2 0.25
+T : placement : 82 : 3 0.25
+T : placement : 82 : 4 0.25
+R : north : 82 : * : * 0.0
+T : north : 82 : 47 0.1
+T : north : 82 : 49 0.9
+R : south : 82 : * : * 0.0
+T : south : 82 : 70 0.1
+T : south : 82 : 85 0.9
+R : east : 82 : * : * 0.0
+T : east : 82 : 68 0.1
+T : east : 82 : 69 0.9
+R : west : 82 : * : * 0.0
+T : west : 82 : 46 0.1
+T : west : 82 : 52 0.9
+T : finish : 82 : 82 1.0
+
+R : placement : 83 : * : * 0.0
+T : placement : 83 : 1 0.25
+T : placement : 83 : 2 0.25
+T : placement : 83 : 3 0.25
+T : placement : 83 : 4 0.25
+R : north : 83 : * : * 0.0
+T : north : 83 : 50 0.9
+T : north : 83 : 80 0.1
+R : south : 83 : * : * 0.0
+T : south : 83 : 68 0.1
+T : south : 83 : 86 0.9
+R : east : 83 : * : * 0.0
+T : east : 83 : 65 0.9
+T : east : 83 : 94 0.1
+R : west : 83 : * : * 0.0
+T : west : 83 : 47 0.1
+T : west : 83 : 78 0.9
+T : finish : 83 : 83 1.0
+
+R : placement : 84 : * : * 0.0
+T : placement : 84 : 1 0.25
+T : placement : 84 : 2 0.25
+T : placement : 84 : 3 0.25
+T : placement : 84 : 4 0.25
+R : north : 84 : * : * 0.0
+T : north : 84 : 48 0.1
+T : north : 84 : 81 0.9
+R : south : 84 : * : * 0.0
+T : south : 84 : 75 0.9
+T : south : 84 : 96 0.1
+R : east : 84 : * : * 0.0
+T : east : 84 : 63 0.1
+T : east : 84 : 64 0.9
+R : west : 84 : * : * 0.0
+T : west : 84 : 54 0.9
+T : west : 84 : 90 0.1
+T : finish : 84 : 84 1.0
+
+R : placement : 85 : * : * 0.0
+T : placement : 85 : 1 0.25
+T : placement : 85 : 2 0.25
+T : placement : 85 : 3 0.25
+T : placement : 85 : 4 0.25
+R : north : 85 : * : * 0.0
+T : north : 85 : 49 0.1
+T : north : 85 : 82 0.9
+R : south : 85 : * : * 0.0
+T : south : 85 : 63 0.1
+T : south : 85 : 70 0.9
+R : east : 85 : * : * 0.0
+T : east : 85 : 61 0.1
+T : east : 85 : 62 0.9
+R : west : 85 : * : * 0.0
+T : west : 85 : 48 0.1
+T : west : 85 : 55 0.9
+T : finish : 85 : 85 1.0
+
+R : placement : 86 : * : * 0.0
+T : placement : 86 : 1 0.25
+T : placement : 86 : 2 0.25
+T : placement : 86 : 3 0.25
+T : placement : 86 : 4 0.25
+R : north : 86 : * : * 0.0
+T : north : 86 : 50 0.1
+T : north : 86 : 83 0.9
+R : south : 86 : * : * 0.0
+T : south : 86 : 61 0.1
+T : south : 86 : 68 0.9
+R : east : 86 : * : * 0.0
+T : east : 86 : 58 0.9
+T : east : 86 : 91 0.1
+R : west : 86 : * : * 0.0
+T : west : 86 : 49 0.1
+T : west : 86 : 57 0.9
+T : finish : 86 : 86 1.0
+
+R : placement : 87 : * : * 0.0
+T : placement : 87 : 1 0.25
+T : placement : 87 : 2 0.25
+T : placement : 87 : 3 0.25
+T : placement : 87 : 4 0.25
+R : north : 87 : * : * 0.0
+T : north : 87 : 99 1.0
+R : south : 87 : * : * 0.0
+T : south : 87 : 91 0.1
+T : south : 87 : 94 0.9
+R : east : 87 : * : * 0.0
+T : east : 87 : 98 1.0
+R : west : 87 : * : * 0.0
+T : west : 87 : 50 0.1
+T : west : 87 : 79 0.9
+T : finish : 87 : 87 1.0
+
+R : placement : 88 : * : * 0.0
+T : placement : 88 : 1 0.25
+T : placement : 88 : 2 0.25
+T : placement : 88 : 3 0.25
+T : placement : 88 : 4 0.25
+R : north : 88 : * : * 0.0
+T : north : 88 : 53 0.1
+T : north : 88 : 56 0.9
+R : south : 88 : * : * 0.0
+T : south : 88 : 90 0.9
+T : south : 88 : 97 0.1
+R : east : 88 : * : * 0.0
+T : east : 88 : 51 0.9
+T : east : 88 : 81 0.1
+R : west : 88 : * : * 0.0
+T : west : 88 : 88 1.0
+T : finish : 88 : 88 1.0
+
+R : placement : 89 : * : * 0.0
+T : placement : 89 : 1 0.25
+T : placement : 89 : 2 0.25
+T : placement : 89 : 3 0.25
+T : placement : 89 : 4 0.25
+R : north : 89 : * : * 0.0
+T : north : 89 : 54 0.1
+T : north : 89 : 76 0.9
+R : south : 89 : * : * 0.0
+T : south : 89 : 89 1.0
+R : east : 89 : * : * 0.0
+T : east : 89 : 74 0.1
+T : east : 89 : 96 0.9
+R : west : 89 : * : * 0.0
+T : west : 89 : 100 1.0
+T : finish : 89 : 89 1.0
+
+R : placement : 90 : * : * 0.0
+T : placement : 90 : 1 0.25
+T : placement : 90 : 2 0.25
+T : placement : 90 : 3 0.25
+T : placement : 90 : 4 0.25
+R : north : 90 : * : * 0.0
+T : north : 90 : 56 0.1
+T : north : 90 : 88 0.9
+R : south : 90 : * : * 0.0
+T : south : 90 : 97 0.9
+T : south : 90 : 100 0.1
+R : east : 90 : * : * 0.0
+T : east : 90 : 54 0.9
+T : east : 90 : 84 0.1
+R : west : 90 : * : * 0.0
+T : west : 90 : 90 1.0
+T : finish : 90 : 90 1.0
+
+R : placement : 91 : * : * 0.0
+T : placement : 91 : 1 0.25
+T : placement : 91 : 2 0.25
+T : placement : 91 : 3 0.25
+T : placement : 91 : 4 0.25
+R : north : 91 : * : * 0.0
+T : north : 91 : 87 0.1
+T : north : 91 : 94 0.9
+R : south : 91 : * : * 0.0
+T : south : 91 : 59 0.1
+T : south : 91 : 66 0.9
+R : east : 91 : * : * 0.0
+T : east : 91 : 92 1.0
+R : west : 91 : * : * 0.0
+T : west : 91 : 58 0.9
+T : west : 91 : 86 0.1
+T : finish : 91 : 91 1.0
+
+R : placement : 92 : * : * 0.0
+T : placement : 92 : 1 0.25
+T : placement : 92 : 2 0.25
+T : placement : 92 : 3 0.25
+T : placement : 92 : 4 0.25
+R : north : 92 : * : * 0.0
+T : north : 92 : 95 0.9
+T : north : 92 : 98 0.1
+R : south : 92 : * : * 0.0
+T : south : 92 : 60 0.1
+T : south : 92 : 67 0.9
+R : east : 92 : * : * 0.0
+T : east : 92 : 92 1.0
+R : west : 92 : * : * 0.0
+T : west : 92 : 58 0.1
+T : west : 92 : 91 0.9
+T : finish : 92 : 92 1.0
+
+R : placement : 93 : * : * 0.0
+T : placement : 93 : 1 0.25
+T : placement : 93 : 2 0.25
+T : placement : 93 : 3 0.25
+T : placement : 93 : 4 0.25
+R : north : 93 : * : * 0.0
+T : north : 93 : 93 1.0
+R : south : 93 : * : * 0.0
+T : south : 93 : 65 0.1
+T : south : 93 : 79 0.9
+R : east : 93 : * : * 0.0
+T : east : 93 : 99 0.9
+T : east : 93 : 101 0.1
+R : west : 93 : * : * 0.0
+T : west : 93 : 77 0.1
+T : west : 93 : 80 0.9
+T : finish : 93 : 93 1.0
+
+R : placement : 94 : * : * 0.0
+T : placement : 94 : 1 0.25
+T : placement : 94 : 2 0.25
+T : placement : 94 : 3 0.25
+T : placement : 94 : 4 0.25
+R : north : 94 : * : * 0.0
+T : north : 94 : 87 0.9
+T : north : 94 : 99 0.1
+R : south : 94 : * : * 0.0
+T : south : 94 : 66 0.1
+T : south : 94 : 91 0.9
+R : east : 94 : * : * 0.0
+T : east : 94 : 95 1.0
+R : west : 94 : * : * 0.0
+T : west : 94 : 65 0.9
+T : west : 94 : 83 0.1
+T : finish : 94 : 94 1.0
+
+R : placement : 95 : * : * 0.0
+T : placement : 95 : 1 0.25
+T : placement : 95 : 2 0.25
+T : placement : 95 : 3 0.25
+T : placement : 95 : 4 0.25
+R : north : 95 : * : * 0.0
+T : north : 95 : 98 0.9
+T : north : 95 : 101 0.1
+R : south : 95 : * : * 0.0
+T : south : 95 : 67 0.1
+T : south : 95 : 92 0.9
+R : east : 95 : * : * 0.0
+T : east : 95 : 95 1.0
+R : west : 95 : * : * 0.0
+T : west : 95 : 65 0.1
+T : west : 95 : 94 0.9
+T : finish : 95 : 95 1.0
+
+R : placement : 96 : * : * 0.0
+T : placement : 96 : 1 0.25
+T : placement : 96 : 2 0.25
+T : placement : 96 : 3 0.25
+T : placement : 96 : 4 0.25
+R : north : 96 : * : * 0.0
+T : north : 96 : 75 0.9
+T : north : 96 : 84 0.1
+R : south : 96 : * : * 0.0
+T : south : 96 : 96 1.0
+R : east : 96 : * : * 0.0
+T : east : 96 : 73 0.1
+T : east : 96 : 74 0.9
+R : west : 96 : * : * 0.0
+T : west : 96 : 89 0.9
+T : west : 96 : 100 0.1
+T : finish : 96 : 96 1.0
+
+R : placement : 97 : * : * 0.0
+T : placement : 97 : 1 0.25
+T : placement : 97 : 2 0.25
+T : placement : 97 : 3 0.25
+T : placement : 97 : 4 0.25
+R : north : 97 : * : * 0.0
+T : north : 97 : 88 0.1
+T : north : 97 : 90 0.9
+R : south : 97 : * : * 0.0
+T : south : 97 : 100 1.0
+R : east : 97 : * : * 0.0
+T : east : 97 : 75 0.1
+T : east : 97 : 76 0.9
+R : west : 97 : * : * 0.0
+T : west : 97 : 97 1.0
+T : finish : 97 : 97 1.0
+
+R : placement : 98 : * : * 0.0
+T : placement : 98 : 1 0.25
+T : placement : 98 : 2 0.25
+T : placement : 98 : 3 0.25
+T : placement : 98 : 4 0.25
+R : north : 98 : * : * 0.0
+T : north : 98 : 101 1.0
+R : south : 98 : * : * 0.0
+T : south : 98 : 92 0.1
+T : south : 98 : 95 0.9
+R : east : 98 : * : * 0.0
+T : east : 98 : 98 1.0
+R : west : 98 : * : * 0.0
+T : west : 98 : 79 0.1
+T : west : 98 : 87 0.9
+T : finish : 98 : 98 1.0
+
+R : placement : 99 : * : * 0.0
+T : placement : 99 : 1 0.25
+T : placement : 99 : 2 0.25
+T : placement : 99 : 3 0.25
+T : placement : 99 : 4 0.25
+R : north : 99 : * : * 0.0
+T : north : 99 : 99 1.0
+R : south : 99 : * : * 0.0
+T : south : 99 : 87 0.9
+T : south : 99 : 94 0.1
+R : east : 99 : * : * 0.0
+T : east : 99 : 101 1.0
+R : west : 99 : * : * 0.0
+T : west : 99 : 80 0.1
+T : west : 99 : 93 0.9
+T : finish : 99 : 99 1.0
+
+R : placement : 100 : * : * 0.0
+T : placement : 100 : 1 0.25
+T : placement : 100 : 2 0.25
+T : placement : 100 : 3 0.25
+T : placement : 100 : 4 0.25
+R : north : 100 : * : * 0.0
+T : north : 100 : 90 0.1
+T : north : 100 : 97 0.9
+R : south : 100 : * : * 0.0
+T : south : 100 : 100 1.0
+R : east : 100 : * : * 0.0
+T : east : 100 : 89 0.9
+T : east : 100 : 96 0.1
+R : west : 100 : * : * 0.0
+T : west : 100 : 100 1.0
+T : finish : 100 : 100 1.0
+
+R : placement : 101 : * : * 0.0
+T : placement : 101 : 1 0.25
+T : placement : 101 : 2 0.25
+T : placement : 101 : 3 0.25
+T : placement : 101 : 4 0.25
+R : north : 101 : * : * 0.0
+T : north : 101 : 101 1.0
+R : south : 101 : * : * 0.0
+T : south : 101 : 95 0.1
+T : south : 101 : 98 0.9
+R : east : 101 : * : * 0.0
+T : east : 101 : 101 1.0
+R : west : 101 : * : * 0.0
+T : west : 101 : 93 0.1
+T : west : 101 : 99 0.9
+T : finish : 101 : 101 1.0
+
+O : * : 0 : 2 1.0
+O : * : 1 : 0 1.0
+O : * : 2 : 0 1.0
+O : * : 3 : 0 1.0
+O : * : 4 : 0 1.0
+O : * : 5 : 0 1.0
+O : * : 6 : 0 1.0
+O : * : 7 : 0 1.0
+O : * : 8 : 1 1.0
+O : * : 9 : 1 1.0
+O : * : 10 : 1 1.0
+O : * : 11 : 0 1.0
+O : * : 12 : 1 1.0
+O : * : 13 : 0 1.0
+O : * : 14 : 0 1.0
+O : * : 15 : 0 1.0
+O : * : 16 : 0 1.0
+O : * : 17 : 0 1.0
+O : * : 18 : 0 1.0
+O : * : 19 : 0 1.0
+O : * : 20 : 0 1.0
+O : * : 21 : 0 1.0
+O : * : 22 : 0 1.0
+O : * : 23 : 0 1.0
+O : * : 24 : 0 1.0
+O : * : 25 : 0 1.0
+O : * : 26 : 0 1.0
+O : * : 27 : 0 1.0
+O : * : 28 : 0 1.0
+O : * : 29 : 0 1.0
+O : * : 30 : 0 1.0
+O : * : 31 : 0 1.0
+O : * : 32 : 0 1.0
+O : * : 33 : 0 1.0
+O : * : 34 : 0 1.0
+O : * : 35 : 3 1.0
+O : * : 36 : 0 1.0
+O : * : 37 : 0 1.0
+O : * : 38 : 0 1.0
+O : * : 39 : 0 1.0
+O : * : 40 : 0 1.0
+O : * : 41 : 0 1.0
+O : * : 42 : 0 1.0
+O : * : 43 : 0 1.0
+O : * : 44 : 0 1.0
+O : * : 45 : 0 1.0
+O : * : 46 : 0 1.0
+O : * : 47 : 0 1.0
+O : * : 48 : 0 1.0
+O : * : 49 : 0 1.0
+O : * : 50 : 0 1.0
+O : * : 51 : 0 1.0
+O : * : 52 : 0 1.0
+O : * : 53 : 0 1.0
+O : * : 54 : 0 1.0
+O : * : 55 : 0 1.0
+O : * : 56 : 0 1.0
+O : * : 57 : 0 1.0
+O : * : 58 : 0 1.0
+O : * : 59 : 0 1.0
+O : * : 60 : 0 1.0
+O : * : 61 : 0 1.0
+O : * : 62 : 0 1.0
+O : * : 63 : 0 1.0
+O : * : 64 : 0 1.0
+O : * : 65 : 0 1.0
+O : * : 66 : 0 1.0
+O : * : 67 : 0 1.0
+O : * : 68 : 0 1.0
+O : * : 69 : 0 1.0
+O : * : 70 : 0 1.0
+O : * : 71 : 0 1.0
+O : * : 72 : 4 1.0
+O : * : 73 : 0 1.0
+O : * : 74 : 0 1.0
+O : * : 75 : 0 1.0
+O : * : 76 : 0 1.0
+O : * : 77 : 0 1.0
+O : * : 78 : 0 1.0
+O : * : 79 : 0 1.0
+O : * : 80 : 0 1.0
+O : * : 81 : 0 1.0
+O : * : 82 : 0 1.0
+O : * : 83 : 0 1.0
+O : * : 84 : 0 1.0
+O : * : 85 : 0 1.0
+O : * : 86 : 0 1.0
+O : * : 87 : 0 1.0
+O : * : 88 : 0 1.0
+O : * : 89 : 0 1.0
+O : * : 90 : 0 1.0
+O : * : 91 : 0 1.0
+O : * : 92 : 0 1.0
+O : * : 93 : 0 1.0
+O : * : 94 : 0 1.0
+O : * : 95 : 0 1.0
+O : * : 96 : 0 1.0
+O : * : 97 : 0 1.0
+O : * : 98 : 1 1.0
+O : * : 99 : 0 1.0
+O : * : 100 : 0 1.0
+O : * : 101 : 0 1.0
+
