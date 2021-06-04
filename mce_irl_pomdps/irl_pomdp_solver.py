@@ -15,7 +15,7 @@ ZERO_NU_S = 1e-8
 
 # Class for setting up options for the optimization problem
 class OptOptions:
-	def __init__(self, mu=1e4, mu_spec=1e4, rho=1, rho_weight=1.0, maxiter=100, max_update=None, 
+	def __init__(self, mu=1e4, mu_spec=1e4, mu_rew=1, rho=1, rho_weight=1.0, maxiter=100, max_update=None, 
 				maxiter_weight=20, graph_epsilon=1e-3, discount=0.9, 
 				verbose=True, verbose_weight=True, verbose_solver=None):
 		"""
@@ -41,6 +41,8 @@ class OptOptions:
 			self.max_update = maxiter
 		else:
 			self.max_update = max_update
+		self.mu_rew = mu_rew
+		self.quotmu = self.mu_rew / self.mu
 		self.maxiter_weight = maxiter_weight
 		self.graph_epsilon = graph_epsilon
 		self.discount = discount
@@ -130,7 +132,7 @@ class IRLSolver:
 		if self._options.verbose and mOpt.status == gp.GRB.OPTIMAL:
 			print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 			print('[Total solving time : {}]'.format(self.total_solve_time))
-			print('[Optimal expected reward : {}]'.format(mOpt.objVal * self._options.mu))
+			print('[Optimal expected reward : {}]'.format(mOpt.objVal / self._options.quotmu))
 			if self._pomdp.has_sideinfo:
 				print('[Satisfaction of the formula = {}]'.format(sum(nu_s_spec[s].x for s in self._pomdp.prob1A)))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
@@ -237,7 +239,7 @@ class IRLSolver:
 				stats_solver['obs_based'] = True
 				for r_name, gradVal in diff_value_dict.items():
 					stats_solver['diff_with_feat__{}'.format(r_name)] = \
-						{'learned feature' : featMatch[r_name], 'expert feature' : rew_pol_dict[r_name], 'gradient' : gradVal, 'rmsprop' : rmsprop[r_name]}
+						{'learned feature' : rew_pol_dict[r_name], 'expert feature' : featMatch[r_name], 'gradient' : gradVal, 'rmsprop' : rmsprop[r_name]}
 				with open(save_info[1]+'_pol.json', 'w') as fp:
 					json.dump(pol, fp, sort_keys=True, indent=4)
 				with open(save_info[1]+'_weight.json', 'w') as fp:
@@ -481,7 +483,7 @@ class IRLSolver:
 
 		if self._options.verbose_weight:
 			print("[No Iter {}]: Entropy + spec {}, Reward {}, Spec SAT : {}, Trust region : {}".format(i, 
-					latest_ent_spec, ent_cost-latest_ent_spec, spec_cost, trust_region))
+					latest_ent_spec, (ent_cost-latest_ent_spec)/self._options.mu_rew, spec_cost, trust_region))
 
 		return policy_k, trust_region, (latest_ent_spec, nu_s_k, nu_s_a_k, nu_s_spec_k, nu_s_a_spec_k)
 
@@ -625,7 +627,7 @@ class IRLSolver:
 			if self._options.verbose or (trust_region < trustRegion['lim']) or (i==self._options.maxiter-1):
 				# print("[Iter {}]: Finding the state and state-action visitation count given a policy".format(i))
 				# print("[Iter {}]: Optimal policy: {}".format(i, policy_k))
-				print("[Iter {}]: Reward attained {}, Spec SAT : {}, Trust region : {}".format(i, curr_rew, spec_cost, trust_region))
+				print("[Iter {}]: Reward attained {}, Spec SAT : {}, Trust region : {}".format(i, curr_rew/self._options.mu_rew, spec_cost, trust_region))
 				if self._pomdp.has_sideinfo:
 					print("[Iter {}]: Number of steps : {}".format(i, sum(
 						nu_s_val for s, nu_s_val in nu_s_spec_k.items())))
@@ -638,7 +640,7 @@ class IRLSolver:
 			# In case it is required to save the policy
 			if save_info is not None and ( (i == self._options.maxiter) or (i > 0 and i % save_info[0] == 0)):
 				stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
-				stats_solver['rew'] = opt_reward
+				stats_solver['rew'] = opt_reward / self._options.mu_rew
 				stats_solver['sat_spec'] = spec_cost
 				stats_solver['n_iter'] = i+1
 				stats_solver['discount'] = self._options.discount
@@ -732,7 +734,7 @@ class IRLSolver:
 		if mOpt.status == gp.GRB.OPTIMAL:
 			print('[Time used to build the full Model : {}]'.format(self.init_encoding_time))
 			print('[Total solving time : {}]'.format(self.total_solve_time))
-			print('[Optimal expected reward : {}]'.format(mOpt.objVal * self._options.mu))
+			print('[Optimal expected reward : {}]'.format(mOpt.objVal / self._options.quotmu))
 			if self._pomdp.has_sideinfo:
 				print('[Satisfaction of the formula = {}]'.format(sum(nu_s[s].x for s in self._pomdp.prob1A)))
 				print('[Slack value spec = {}]'.format(slack_spec.x))
@@ -746,7 +748,7 @@ class IRLSolver:
 		# In case it is required to save the policy
 		if save_info is not None:
 			stats_solver['time'] = self.total_solve_time+self.update_constraint_time+self.checking_policy_time
-			stats_solver['rew'] = mOpt.objVal * self._options.mu
+			stats_solver['rew'] = mOpt.objVal / self._options.quotmu
 			stats_solver['discount'] = self._options.discount
 			stats_solver['obs_based'] = False
 			with open(save_info[1]+'_pol.json', 'w') as fp:
@@ -985,7 +987,7 @@ class IRLSolver:
 			:param theta : the weight for the feature function
 			:param featmatch : the expected feature matching
 		"""
-		val_expr = [(rew[(o, a)] * p * theta[rName] / self._options.mu, nu_s_a_val) \
+		val_expr = [(rew[(o, a)] * p * theta[rName] * self._options.quotmu, nu_s_a_val) \
 					for rName, rew in self._pomdp.reward_features.items() \
 					for s, nu_s_a_t in nu_s_a.items() \
 					for a, nu_s_a_val in nu_s_a_t.items()
