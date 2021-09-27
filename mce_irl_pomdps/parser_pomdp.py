@@ -267,6 +267,7 @@ class PrismModel(POMDP):
 
 		# Build the pomdp model
 		pomdp = stormpy.build_sparse_model_with_options(prism_program, options)
+		# print(pomdp)
 		assert pomdp.model_type == stormpy.ModelType.POMDP, "The file does not represent a POMDP"
 		assert len(pomdp.reward_models.keys())>0, "No feature rewards provided"
 		for r_id, r_val in pomdp.reward_models.items():
@@ -546,7 +547,7 @@ class PrismModel(POMDP):
 		resDict['formula'] = self._formulas
 
 	def simulate_policy(self, sigma, weight, max_run, max_iter_per_run, seed=None,
-							obs_based=True, stop_at_accepting_state=True, stat=dict()):
+							obs_based=True, stop_at_accepting_state=True, stat=dict(), fun_based=False):
 		assert self.savePomdp, 'POMDP was not saved in memory for simulation'
 		rand_seed = np.random.randint(0, 10000) if seed is None else seed 
 		simulator = stormpy.simulator.create_simulator(self.pomdp, seed=rand_seed)
@@ -569,8 +570,10 @@ class PrismModel(POMDP):
 				# Add the observaion, action to the sequence
 				if obs_based:
 					# Pick an action in the set of random actions with probability given by the policy
-					act = np.random.choice(np.array([a for a in sigma[obs]]), 
-								p=np.array([probA for a, probA in sigma[obs].items()]))
+					assert not fun_based or (obs_based and fun_based)
+					sigma_obs = sigma[obs] if not fun_based else sigma(obs)
+					act = np.random.choice(np.array([a for a in sigma_obs]), 
+								p=np.array([probA for a, probA in sigma_obs.items()]))
 				else:
 					# Pick an action in the set of random actions with probability given by the
 					act = np.random.choice(np.array([a for a in sigma[current_state]]), 

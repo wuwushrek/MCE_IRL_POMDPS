@@ -10,7 +10,7 @@ def parse_data(exp_name, label, max_run=1000, max_iter_per_run=50,
 				seed=201, color='red', linestyle='solid', 
 				include_errobar=True, errorbariter=2, errorbarsize=6,
 				linesize=3, markertype=None, markersize=None,
-				save_result= dict()):
+				save_result= dict(), gail=False):
 	""" Simulate a given policy and plot the evolution of reward with the
 		true weight instead of the learned weight
 		:param exp_name : the name/path of the file containing the policy, weights and statistics
@@ -59,7 +59,24 @@ def parse_data(exp_name, label, max_run=1000, max_iter_per_run=50,
 
 	# Simulate the policy
 	stat_sim = dict()
-	_, rewData = pomdp_r.simulate_policy(exp_pol, weight_true, max_run, max_iter_per_run, seed=seed,
+	if gail:
+		obs_based = True
+		import random
+		obs_to_state = {}
+		for s, val in pomdp_r._obs_state_distr.items():
+			assert len(val) == 1, 'Only one observation per states'
+			(obVal, prob), = val.items()
+			if obVal not in obs_to_state:
+				obs_to_state[obVal] = set()
+			obs_to_state[obVal].add(s)
+		def polmdp2pomdp(obs):
+			state_list = obs_to_state[obs]
+			m_state = random.choice(list(state_list))
+			return exp_pol[m_state]
+		_, rewData = pomdp_r.simulate_policy(polmdp2pomdp, weight_true, max_run, max_iter_per_run, seed=seed,
+						obs_based=obs_based, stop_at_accepting_state=True, stat=stat_sim, fun_based=True)
+	else:
+		_, rewData = pomdp_r.simulate_policy(exp_pol, weight_true, max_run, max_iter_per_run, seed=seed,
 						obs_based=obs_based, stop_at_accepting_state=True, stat=stat_sim)
 
 	# Cumulative sum of the reward for each run

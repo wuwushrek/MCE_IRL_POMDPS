@@ -444,37 +444,42 @@ traj_dir = 'aaai_experiment_09-17.pickle'
 (n_row, n_col, n_feat), traj_data, m_robot_state_evol = load_map_file(traj_dir)
 
 # Origin point of the sub-grid
-south_west_center = (75, 100) # Row first then column
+# south_west_center = (0, 0) # Row first then column
+south_west_center = (80, 100) # Row first then column
 
 # Define the uncertain observation
 obs_radius = 4
 
 # Specify the trajectory of interest
-id_traj = [0,1,2,3]
+id_traj = [0,1,2,3,4,5,6,7,8,9]
 eps_bias = None
 
 # Number of row and column
-n_row_focus = 20
-n_col_focus = 40
+# n_row_focus = n_row
+# n_col_focus = n_col
+n_row_focus = 40
+n_col_focus = 80
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
-focus_init = (5, 5, 10, 10)
+focus_init = (0, 0, n_row, n_col)
+# focus_init = (100-south_west_center[0], 110-south_west_center[1], 5, 5)
 
 # Build the feature distribution on the focused map
 final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=south_west_center, id_traj=id_traj, eps_bias=eps_bias)
 # print(final_map[(20,27)])
 # Compute the transition matrix and the set of states and observation from the model
-# m_obs_dict = None
-# m_action_set = None
-(trans_dict, state_set), (m_obs_dict, id_obs), (m_action_set, move) = build_pomdp(n_row_focus, n_col_focus, final_map, obs_radius=obs_radius)
+m_obs_dict = None
+m_action_set = None
+# (trans_dict, state_set), (m_obs_dict, id_obs), (m_action_set, move) = build_pomdp(n_row_focus, n_col_focus, final_map, obs_radius=obs_radius)
 
 robot_obs_evol, robot_pos_evol = build_state_trajectories(m_obs_dict, m_robot_state_evol, id_traj, m_action_set, focus_zone)
 goal_set = [ m_traj[-1] for m_traj in robot_pos_evol] 
-init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_init[0] and j>=focus_init[1] and i< focus_init[2] and j < focus_init[3])]
+# init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_init[0] and j>=focus_init[1] and i< focus_init[2] and j < focus_init[3])]
+init_set = []
 # print(robot_obs_evol)
 # print(robot_pos_evol)
 
-# Build the POMDP file
-build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), m_action_set, 'test_phoenix')
+# # Build the POMDP file
+# build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), m_action_set, 'test_phoenix')
 
 
 ####################################################################################################
