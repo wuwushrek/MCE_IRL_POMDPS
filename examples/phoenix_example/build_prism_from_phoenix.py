@@ -375,8 +375,11 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 
 	# Add the endless loop at the end goal point
 	text_model += '\n\t // Ensure that end goal points reach a sink point\n'
-	for act in actionSet:
-		text_model += '\t[{}] done -> (state\' = {}) & (obs\' = {});\n'.format(act, nstate, nobs)
+	for (i,j,featv) in goalset:
+		for act in actionSet:
+			text_model += '\t[{}] state={} -> (state\' = {}) & (obs\' = {});\n'.format(act, dictState[(i,j,featv)], nstate, nobs)
+	# for act in actionSet:
+	# 	text_model += '\t[{}] done -> (state\' = {}) & (obs\' = {});\n'.format(act, nstate, nobs)
 
 	text_model += '\n\t// Sink point --> Loop here\n'
 	for act in actionSet:
@@ -420,7 +423,7 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 	text_model += 'endrewards\n\n'
 
 	# Define some label
-	text_model += 'label "goal"  = done;\n'
+	text_model += 'label "goal"  = obs={};\n'.format(nobs)
 	text_model += 'label "road"  = road;\n'
 	text_model += 'label "grass"  = grass;\n'
 	text_model += 'label "gravel"  = gravel;\n'
