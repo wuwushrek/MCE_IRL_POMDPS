@@ -233,10 +233,10 @@ class PrismModel(POMDP):
 
 		# Build the state satysfying the spec with prob 1 and 
 		# the state not satysfying the sepc
-		pomdp = self.build_prob01_prop(prism_program)
+		pomdp, m_choice_label, m_observation_valuation = self.build_prob01_prop(prism_program)
 
 		# Build the observation, state, state-action, and state-observation mapping
-		self.build_model_sets(pomdp)
+		self.build_model_sets(pomdp, m_choice_label, m_observation_valuation)
 
 		# Build the reward model
 		self.build_reward_model(pomdp)
@@ -282,7 +282,7 @@ class PrismModel(POMDP):
 
 		return prism_program, pomdp
 
-	def build_model_sets(self, pomdp):
+	def build_model_sets(self, pomdp, m_choice_label, m_observation_valuation):
 		""" Initialize the data for the model
 		"""
 		# Save the number of states
@@ -313,6 +313,9 @@ class PrismModel(POMDP):
 		for state in pomdp.states:
 			self.state_string[state.id] = state_val.get_string(state.id)
 
+		self.action_string = dict()
+		self.obs_string = dict()
+
 		# Define the full list of state action and observation action
 		self._states_act = dict() # Save for each state the allowed actions
 		self._obs_act = dict() # Save for each observations the allowed actions
@@ -322,16 +325,23 @@ class PrismModel(POMDP):
 			self._states_act[state.id] = set()
 			self._succ_state[state.id] = list()
 			obs_id = pomdp.get_observation(state.id)
+			if m_observation_valuation is not None:
+			    self.obs_string[obs_id] = m_observation_valuation.get_string(obs_id)
 			if obs_id not in self._obs_act:
 				self._obs_act[obs_id] = set()
 			for action in state.actions:
-				self._states_act[state.id].add(action.id)
-				self._obs_act[obs_id].add(action.id)
-				for trans in action.transitions:
-					if trans.column not in self._pred_state:
-						self._pred_state[trans.column] = list()
-					self._pred_state[trans.column].append((state.id, action.id, trans.value()))
-					self._succ_state[state.id].append((trans.column, action.id, trans.value()))
+			    c_index = pomdp.get_choice_index(state.id, action.id)
+			    if m_choice_label is not None:
+			        if state.id not in self.action_string:
+			            self.action_string[state.id] = dict()
+			        self.action_string[state.id][action.id] = m_choice_label.get_labels_of_choice(c_index)
+			    self._states_act[state.id].add(action.id)
+			    self._obs_act[obs_id].add(action.id)
+			    for trans in action.transitions:
+			        if trans.column not in self._pred_state:
+			            self._pred_state[trans.column] = list()
+			        self._pred_state[trans.column].append((state.id, action.id, trans.value()))
+			        self._succ_state[state.id].append((trans.column, action.id, trans.value()))
 
 
 	def build_reward_model(self, pomdp):
@@ -410,7 +420,13 @@ class PrismModel(POMDP):
 
 		# Build the pomdp model with all the parsed properties
 		pomdp_t = stormpy.build_sparse_model_with_options(prism_program, options)
-		# print(pomdp_t)
+
+		m_choice_label = None
+		if pomdp_t.has_choice_labeling():
+		    m_choice_label = pomdp_t.choice_labeling
+		m_observation_valuation = None
+		if pomdp_t.has_observation_valuations():
+		    m_observation_valuation = pomdp_t.observation_valuations
 
 		# Make its representation canonic to obtain later the pMC
 		pomdp = stormpy.pomdp.make_canonic(pomdp_t)
@@ -472,7 +488,7 @@ class PrismModel(POMDP):
 				firstIter = False
 			self._prob0E = prob0E_state | self._prob0E
 			self._prob1A = prob1A_state & self._prob1A
-		return pomdp
+		return pomdp, m_choice_label, m_observation_valuation
 
 	@property
 	def n_state(self):
