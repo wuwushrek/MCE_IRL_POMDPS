@@ -19,6 +19,41 @@ memoryTypeDict = {	'PomdpMemoryPattern.selective_counter' : stormpy.pomdp.PomdpM
 					'PomdpMemoryPattern.trivial' : stormpy.pomdp.PomdpMemoryPattern.trivial
 				}
 
+
+
+
+def pomdp_labels_and_reward_feature(pomdp):
+	""" Compute and save the observation-action reward for 
+		each feature reward function
+		This function assumes that in the prism file, the reward was 
+		an observation-action based reward. 
+		Specifically, each observation, action of each feature has a unique reward.
+		Note that this is not necessary the case if the feature are written as 
+		state-action based rewards
+	"""
+	assert pomdp.has_choice_labeling(), 'There should be string representation of the pomdp actions'
+	action_label = pomdp.choice_labeling
+	state_label = pomdp.state_valuations
+	state_action_string = dict()
+	reward_features = dict()
+	for state in pomdp.states:
+		obs_id = pomdp.get_observation(state.id)
+		curr_state_dict = dict()
+		state_action_string[state.id] = (state_label.get_string(state.id), obs_id, curr_state_dict)
+		for action in state.actions:
+			c_index = pomdp.get_choice_index(state.id, action.id)
+			curr_state_dict[action.id] = action_label.get_labels_of_choice(c_index)
+			for r_id, r_val in pomdp.reward_models.items():
+				if r_id not in reward_features:
+					reward_features[r_id] = dict()
+				curr_rew = r_val.get_state_action_reward(c_index)
+				assert ((obs_id, action.id) not in reward_features[r_id]) or \
+						reward_features[r_id][(obs_id, action.id)] == curr_rew, \
+							"Observation reward not unique"
+				reward_features[r_id][(obs_id, action.id)] = curr_rew
+	return state_action_string, reward_features
+
+
 class POMDP(ABC):
 	""" An abstract class modelling a POMDP.
 		Typically, this class will be used as an interface
@@ -229,14 +264,15 @@ class PrismModel(POMDP):
 		self.savePomdp = savePomdp
 
 		# Build the model
-		prism_program, _ = self.build_model()
+		# prism_program, _ = self.build_model()
+		prism_program = stormpy.parse_prism_program(self._path_prism)
 
 		# Build the state satysfying the spec with prob 1 and 
 		# the state not satysfying the sepc
-		pomdp, m_choice_label, m_observation_valuation = self.build_prob01_prop(prism_program)
+		pomdp = self.build_prob01_prop(prism_program)
 
 		# Build the observation, state, state-action, and state-observation mapping
-		self.build_model_sets(pomdp, m_choice_label, m_observation_valuation)
+		self.build_model_sets(pomdp)
 
 		# Build the reward model
 		self.build_reward_model(pomdp)
@@ -247,7 +283,7 @@ class PrismModel(POMDP):
 
 		if savePomdp: # Save the storm pomdp model if required
 			self.pomdp = pomdp
-			self.prism_program = prism_program
+			# self.prism_program = prism_program
 
 
 	def build_model(self):
@@ -282,7 +318,7 @@ class PrismModel(POMDP):
 
 		return prism_program, pomdp
 
-	def build_model_sets(self, pomdp, m_choice_label, m_observation_valuation):
+	def build_model_sets(self, pomdp):
 		""" Initialize the data for the model
 		"""
 		# Save the number of states
@@ -313,9 +349,6 @@ class PrismModel(POMDP):
 		for state in pomdp.states:
 			self.state_string[state.id] = state_val.get_string(state.id)
 
-		self.action_string = dict()
-		self.obs_string = dict()
-
 		# Define the full list of state action and observation action
 		self._states_act = dict() # Save for each state the allowed actions
 		self._obs_act = dict() # Save for each observations the allowed actions
@@ -325,16 +358,9 @@ class PrismModel(POMDP):
 			self._states_act[state.id] = set()
 			self._succ_state[state.id] = list()
 			obs_id = pomdp.get_observation(state.id)
-			if m_observation_valuation is not None:
-			    self.obs_string[obs_id] = m_observation_valuation.get_string(obs_id)
 			if obs_id not in self._obs_act:
 				self._obs_act[obs_id] = set()
 			for action in state.actions:
-			    c_index = pomdp.get_choice_index(state.id, action.id)
-			    if m_choice_label is not None:
-			        if state.id not in self.action_string:
-			            self.action_string[state.id] = dict()
-			        self.action_string[state.id][action.id] = m_choice_label.get_labels_of_choice(c_index)
 			    self._states_act[state.id].add(action.id)
 			    self._obs_act[obs_id].add(action.id)
 			    for trans in action.transitions:
@@ -418,15 +444,10 @@ class PrismModel(POMDP):
 		options.set_build_with_choice_origins(True)
 		options.set_build_observation_valuations(True)
 
-		# Build the pomdp model with all the parsed properties
+		# Build the pomdp model with all the parsed properties without any memory
 		pomdp_t = stormpy.build_sparse_model_with_options(prism_program, options)
 
-		m_choice_label = None
-		if pomdp_t.has_choice_labeling():
-		    m_choice_label = pomdp_t.choice_labeling
-		m_observation_valuation = None
-		if pomdp_t.has_observation_valuations():
-		    m_observation_valuation = pomdp_t.observation_valuations
+		self._label_state_action_nomem, self._reward_feat_nomem = pomdp_labels_and_reward_feature(pomdp_t)
 
 		# Make its representation canonic to obtain later the pMC
 		pomdp = stormpy.pomdp.make_canonic(pomdp_t)
@@ -488,7 +509,7 @@ class PrismModel(POMDP):
 				firstIter = False
 			self._prob0E = prob0E_state | self._prob0E
 			self._prob1A = prob1A_state & self._prob1A
-		return pomdp, m_choice_label, m_observation_valuation
+		return pomdp
 
 	@property
 	def n_state(self):
@@ -572,11 +593,13 @@ class PrismModel(POMDP):
 		stat['seed'] = rand_seed
 		stat['obs_based'] = obs_based
 		stat['max_len'] = 0
+		stat['state_evol'] = list()
 		for i in range(max_run):
 			# Initialize the simulator
 			obs, reward = simulator.restart()
 			current_state = simulator._report_state()
 			# Save the sequence of observation action of this trajectory
+			seq_state = list()
 			seq_obs = list()
 			acc_reward = list() # Accumulated reward
 			firstDone = True # First time reaching done
@@ -595,6 +618,7 @@ class PrismModel(POMDP):
 					act = np.random.choice(np.array([a for a in sigma[current_state]]), 
 								p=np.array([probA for a, probA in sigma[current_state].items()]))
 				seq_obs.append((obs, act))
+				seq_state.append((current_state, act))
 				# Update the reward function
 				#if firstDone:
 				acc_reward.append(sum(w_val*self._reward_features[r_name][(obs,act)] for r_name, w_val in weight.items()))
@@ -615,6 +639,7 @@ class PrismModel(POMDP):
 			#print(acc_reward,"after")
 			res_traj.append(seq_obs)
 			rew_list.append(acc_reward)
+			stat['state_evol'].append(seq_state)
 			# print('---------------------------------------------------------')
 			# print('[Run: {}, Number iteration: {}, Reward attained: {} ]'.format(i, j, sum(acc_reward)))
 			# print('Sequence : {}'.format(seq_obs))

@@ -12,6 +12,21 @@ trustRegion = {'red': lambda x: ((x - 1) / 1.5 + 1),
 gradientStepSize = lambda iterVal, gradVal: 1.0 / np.power(iterVal+2, 0.5)
 ZERO_NU_S = 1e-8
 
+def compute_feature_from_trajectory_and_rewfeat(traj, rewfeat, discount):
+	""" Given a set of trajectories <-> a set of observation action sequences that describes
+		expert trajecties, and a set of features on the pomdp (or the product pomdp),
+		This function provide the desired expected feature induced by the trajectory
+		:param traj : A set of observation-action sequences
+	"""
+	featMatch = dict()
+	i_size = 1.0 / len(traj)
+	for r_name, rew in rewfeat.items():
+		featMatch[r_name] = i_size * \
+							sum([rew[(o, a)] * (discount ** i) \
+								 for seq_v in traj \
+								 for i, (o, a) in enumerate(seq_v)])
+
+	return featMatch
 
 # Class for setting up options for the optimization problem
 class OptOptions:
@@ -271,15 +286,7 @@ class IRLSolver:
 			expert trajecties, provide the desired expected feature induced by the trajectory
 			:param traj : A set of observation-action sequences
 		"""
-		featMatch = dict()
-		i_size = 1.0 / len(traj)
-		for r_name, rew in self._pomdp.reward_features.items():
-			featMatch[r_name] = i_size * \
-								sum([rew[(o, a)] * (self._options.discount ** i) \
-									 for seq_v in traj \
-									 for i, (o, a) in enumerate(seq_v)])
-
-		return featMatch
+		return compute_feature_from_trajectory_and_rewfeat(traj , self._pomdp.reward_features, self._options.discount)
 
 	def compute_maxent_policy_via_scp(self, weight, init_problem=True, featMatch=None, 
 										initPolicy=None, trust_prev=None, init_visit=None):
