@@ -144,3 +144,4 @@ cython_debug/
 *.pickle
 export_*.prism
 *.pkl
+*.eps
