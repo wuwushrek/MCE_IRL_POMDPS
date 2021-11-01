@@ -45,6 +45,21 @@ pol_val_grb_15 = irlPb_15.from_reward_to_policy_via_scp(weight, save_info=(20, '
 # Get the optimal policy if the agent has full observability
 pol_val_mdp = irlPb_1.from_reward_to_optimal_policy_mdp_lp(weight, gamma=options_opt.discount, save_info=(-1,'maze_mdp_fwd', weight))
 
+# import random
+# obs_to_state = {}
+# for s, val in pomdp_r_1._obs_state_distr.items():
+# 	assert len(val) == 1, 'Only one observation per states'
+# 	(obVal, prob), = val.items()
+# 	if obVal not in obs_to_state:
+# 		obs_to_state[obVal] = set()
+# 	obs_to_state[obVal].append(s)
+
+# def polmdp2pomdp(obs):
+# 	state_list = obs_to_state[obs]
+# 	m_state = random.choice(state_list)
+# 	return pol_val_mdp[m_state]
+
+
 
 # Generate Trajectory of different length using the state-based policy from the MDP and observation-based from MDP
 obs_based = True
