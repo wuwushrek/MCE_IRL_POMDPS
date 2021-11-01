@@ -62,7 +62,8 @@ def convert_stormstate_to_phoenixstate(trajs_storm, state_dict, pomdp_instance):
 # For reproducibility
 np.random.seed(201)
 
-datafile = "phoenix_scen1_r4uncert_data.pkl"
+# datafile = "phoenix_scen1_r4uncert_data.pkl"
+datafile = "phoenix_scen1_r4uncert_40x80_100x100_data.pkl"
 
 # Load the data file for robot trajectory
 mFile = open(datafile, 'rb')
@@ -76,7 +77,7 @@ obs_dict = mData['obs_dict']
 prism_file = mData['prism_file']
 
 # Load the pomdp model
-pomdp_r_1 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=False)
+pomdp_r_1 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=True)
 # pomdp_r_5 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.fixed_counter, memory_len=4, export=False)
 
 print(pomdp_r_1.pomdp)
@@ -127,7 +128,7 @@ irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'lim' : 1+1e-3}
 
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
-                                    maxiter_weight=300, rho_weight=1, verbose_solver=False,
+                                    maxiter_weight=110, rho_weight=1, verbose_solver=False,
                                     graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
 # Decreasing step size in the gradient updates
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
@@ -149,7 +150,7 @@ pomdp_r_1_si = parser_pomdp.PrismModel(prism_file, ["P=? [F \"goal\"]"], counter
 print(pomdp_r_1_si)
 
 options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
-                                    maxiter_weight=300, rho_weight= 1, verbose_solver=False,
+                                    maxiter_weight=110, rho_weight= 1, verbose_solver=False,
                                     graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
 
 
