@@ -310,6 +310,9 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 	# Parse the extra arguments of the function
 	n_row, n_col, focus_zone, obs_radius, id_traj, goalset, initset, robot_obs, robot_pos = extra_args
 
+	# Make sure there is no repeat in the goal set
+	goalset = set(goalset)
+
 	# Parse the POMDP representation of the map
 	final_map, trans_dict, state_set, m_obs_dict, id_obs = pomdp_repr
 
@@ -454,18 +457,18 @@ south_west_center = (80, 100) # Row first then column
 obs_radius = 4
 
 # Specify the trajectory of interest
-# id_traj = [0,1,2,3,4,5,6,7,8,9]
-id_traj = [0]
+id_traj = [0,1,2,3,4,5,6,7,8,9]
+# id_traj = [0]
 eps_bias = None
 
 # Number of row and column
 # n_row_focus = n_row
 # n_col_focus = n_col
-n_row_focus = 20
-n_col_focus = 40
+n_row_focus = 40
+n_col_focus = 80
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
 # focus_init = (0, 0, n_row, n_col)
-focus_init_row = 90-south_west_center[0]
+focus_init_row = 100-south_west_center[0]
 focus_init_col = 100-south_west_center[1]
 focus_init_nrow = 5
 focus_init_ncol = 5
@@ -489,4 +492,4 @@ init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_ini
 # # Build the POMDP file
 build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), 
                     (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), 
-                    m_action_set, 'phoenix_scen1_r4uncert')
+                    m_action_set, 'phoenix_scen1_r4uncert_40x80_100x100')
