@@ -191,7 +191,7 @@ def build_pomdp(n_row, n_col, dict_feature, obs_radius=4):
 			pbSum = 0
 			for elem in setObs:
 				obsVal = tuple(fVal for (fVal, cVal) in elem)
-				resProb = math.prod(cVal for (fVal, cVal) in elem)
+				resProb = np.prod([cVal for (fVal, cVal) in elem])
 				m_obs_id = int(unique_obs)
 				if obsVal not in obsSet:
 					# Add this observation in the set of observations

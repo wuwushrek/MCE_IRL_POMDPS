@@ -63,7 +63,7 @@ def convert_stormstate_to_phoenixstate(trajs_storm, state_dict, pomdp_instance):
 np.random.seed(201)
 
 # datafile = "phoenix_scen1_r4uncert_data.pkl"
-datafile = "phoenix_scen1_r4uncert_40x80_100x100_data.pkl"
+datafile = "phoenix_scen1_r5zoneobs_data.pkl"
 
 # Load the data file for robot trajectory
 mFile = open(datafile, 'rb')
@@ -93,7 +93,7 @@ options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, 
                                     graph_epsilon=1e-6, discount=0.999, verbose=True, verbose_solver=False)
 
 # True reward in the POMDP environment
-weight = {'goal' : 5, 'road' : 1, 'gravel' : 1, 'grass' : 0.1, 'time' : 1.5}
+weight = {'goal' : 50, 'road' : 0.1, 'gravel' : 0.5, 'grass' : -0.1, 'time' : 0.4}
 
 # Build the solver for different memory size
 irlPb_1 = irl_solver.IRLSolver(pomdp_r_1, init_trust_region=1.01, max_trust_region=1.5, options=options_opt)

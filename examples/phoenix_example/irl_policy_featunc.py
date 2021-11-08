@@ -89,7 +89,7 @@ irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'lim' : 1+1e-3}
 
 # Options for the solver
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=5, maxiter_weight=100,
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, maxiter_weight=100,
                                     graph_epsilon=1e-6, discount=0.999, verbose=True, verbose_solver=False)
 
 # True reward in the POMDP environment
@@ -130,7 +130,7 @@ irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'lim' : 1+1e-3}
 
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
-                                    maxiter_weight=4, rho_weight=1, verbose_solver=False,
+                                    maxiter_weight=110, rho_weight=1, verbose_solver=False,
                                     graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
 # Decreasing step size in the gradient updates
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
@@ -152,7 +152,7 @@ pomdp_r_1_si = parser_pomdp.PrismModel(prism_file, ["P=? [F \"goal\"]"], counter
 print(pomdp_r_1_si)
 
 options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
-                                    maxiter_weight=4, rho_weight= 1, verbose_solver=False,
+                                    maxiter_weight=110, rho_weight= 1, verbose_solver=False,
                                     graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
 
 
