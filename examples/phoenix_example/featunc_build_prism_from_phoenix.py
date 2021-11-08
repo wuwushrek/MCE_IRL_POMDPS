@@ -56,26 +56,6 @@ def load_map_file(traj_dir):
 			
 	return (n_row, n_col, n_feat), traj_data, m_robot_state_evol
 
-	# # Parse the agent trajectories and save them
-	# m_robot = np.zeros((len(traj_data), n_row, n_col))
-	# m_robot_row = list() # Save the agent row positions
-	# m_robot_col = list() # Save the agent col positions
-
-	# for i, elem in enumerate(traj_data):
-	# 	row_val, col_val = list(), list()
-
-	# 	# x,y are given such that x is the index on the column axis and y the index on the row axis
-	# 	for (x,y) in elem['trajectory']:
-	# 		m_robot[i, y, x] = 1
-	# 		row_val.append(y)
-	# 		col_val.append(x)
-
-	# 	# Append the robot row and column to the resuls
-	# 	m_robot_row.append(row_val)
-	# 	m_robot_col.append(col_val)
-
-	# return (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col)
-
 
 def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bias=10):
 	""" Take a set of map from the Phoenix environment and construct a dictionary such that
@@ -169,29 +149,16 @@ def build_pomdp(n_row, n_col, dict_feature, obs_radius=4):
 	num_transition = 0
 
 	# Iterate over the feature of each cell to build the underlying MDP
-	for (i,j), featv in tqdm(dict_feature.items(), total=len(dict_feature)):
-		# Total number of features for this cell
-		total_count = sum([ v for x,v in featv.items()])
-		# Iterate through the feature of this cell
-		for feat_value, feat_count in tqdm(featv.items(), total=len(featv), leave=False):
-			# Define the dictionary for a specific feat_vaue
-			trans_dict[(i, j, feat_value)] = {act : dict() for act,_ in actionSet.items()}
-			state_set.add((i, j, feat_value))
-			# (i,j,feat_value) is the current state --> Go through the action set
+	for i in tqdm(range(n_row)):
+		for j in tqdm(range(n_col), leave=False):
+			state_set.add((i,j))
+			trans_dict[(i, j)] = {act : dict() for act,_ in actionSet.items()}
 			for act, act_repr in actionSet.items():
 				# Next state if taking any of the actions in the action set
 				next_ij = move(i, j, *act_repr)
-				# print(i, j, act, next_ij)
-				# Check the possible features for the next state
-				next_ij_feat = dict_feature[next_ij]
-				# COunt the total number of features in the next state
-				total_count_next = sum([ v for x,v in next_ij_feat.items()])
-				# Build the transition to the next state(*next_ij, next_ij_feat)
-				for next_feat_val, next_feat_prob in next_ij_feat.items():
-					trans_dict[(i, j, feat_value)][act][(*next_ij, next_feat_val)] = float(next_feat_prob) / total_count_next
-					state_set.add((*next_ij, next_feat_val))
-					num_transition += 1
-				# trans_dict[(i, j, feat_value)] = { act : (*move(i,j, *actionSet[act]), dict_feature[move(i,j,*actionSet[act])]) for act in actionSet }
+				trans_dict[(i, j)][act][next_ij] = 1.0
+				state_set.add(next_ij)
+				num_transition += 1
 
 	# Build the observation function/map
 	obsSet = set() # Store the unique observation id (all the features in a fixed radius )
@@ -203,32 +170,42 @@ def build_pomdp(n_row, n_col, dict_feature, obs_radius=4):
 	id_obs_reverse = dict()
 
 	# This observation function specifies that the agent knows his position with a fixed uncertaincy around his actual position
-	for i in tqdm(range(0, n_row, obs_radius)):
-		for j in tqdm(range(0, n_col, obs_radius), leave=False):
+	for i in tqdm(range(n_row)):
+		for j in tqdm(range(n_col), leave=False):
 			# Get the element at the top left corner
 			corner_left_up = (i,j)
 			# Get the element at the lower right corner
 			corner_right_down = move(i, j, obs_radius, obs_radius)
 			# Iterate through all the state around the fixed radius of (i,j)
+			list_features_square = []
 			for k in range(corner_left_up[0], corner_right_down[0]+1):
 				for l in range(corner_left_up[1], corner_right_down[1]+1):
-					for feat_val, occ_feat in dict_feature[(k,l)].items():
-						# If the observation (zone, current feature) has not already been defined
-						if (i,j, feat_val) not in obsSet:
-							# Encode a unique indentifier for the current zone around (i,j) and the sensing of the feature at current position
-							id_obs[unique_obs] = (i,j, feat_val)
-							# Specify a way to reciver the identifier fron the observation (i,j,featkl)
-							id_obs_reverse[(i,j, feat_val)] = unique_obs
-							# Enforce that the current state corresponds to the obtained observation
-							obsFullDict[(k, l, feat_val)] = unique_obs
-							# Add this observation in the set of observations
-							obsSet.add((i,j, feat_val))
-							# Increment the number of unique observation
-							unique_obs += 1
-						else:
-							# If the observation is already defined -> Just copy it here
-							obsFullDict[(k, l, feat_val)] = id_obs_reverse[(i,j, feat_val)]
-
+					total_count = sum (c_val for k, c_val in dict_feature[(k,l)].items())
+					list_features_square.append([(k,c_val/total_count) for k, c_val in dict_feature[(k,l)].items()])
+			# Do the cartesian product of the sets of features in the radius around the current position
+			setObs = list(product(*list_features_square))
+			# tqdm.write('{}'.format(list_features_square))
+			# tqdm.write('Len OBS {}'.format(len(setObs)))
+			# print(setObs)
+			dict_obs = dict()
+			pbSum = 0
+			for elem in setObs:
+				obsVal = tuple(fVal for (fVal, cVal) in elem)
+				resProb = math.prod(cVal for (fVal, cVal) in elem)
+				m_obs_id = int(unique_obs)
+				if obsVal not in obsSet:
+					# Add this observation in the set of observations
+					obsSet.add(obsVal)
+					id_obs_reverse[obsVal] = unique_obs
+					id_obs[unique_obs] = obsVal
+					unique_obs += 1
+				else:
+					m_obs_id = id_obs_reverse[obsVal]
+				dict_obs[m_obs_id] = dict_obs.get(m_obs_id, 0) + resProb
+				pbSum += resProb
+			assert pbSum == 1, 'Sum of possibilities should be one'
+			obsFullDict[(i,j)] = dict_obs
+		# print(dict_obs)
 	
 	print('Number of states : {}'.format(len(state_set)))
 	print('Number of transitions : {}'.format(num_transition))
@@ -282,9 +259,9 @@ def build_state_trajectories(obsFullDict, traj_robot, id_traj, actionSet, focus_
 		# Iterate to get the observation and the action taken at each time step
 		for (i,j,featv), (next_i, next_j, next_featv) in zip(robot_traj[:-1],robot_traj[1:]):
 			if obsFullDict is None:
-				curr_pos_evol.append( (i-focus_zone[0],j-focus_zone[1], featv) )
+				curr_pos_evol.append( (i-focus_zone[0],j-focus_zone[1]) )
 				continue
-			curr_obs = (i-focus_zone[0], j-focus_zone[1], featv) # obsFullDict[(i-focus_zone[0], j-focus_zone[1], featv)]
+			curr_obs = (i-focus_zone[0], j-focus_zone[1]) # obsFullDict[(i-focus_zone[0], j-focus_zone[1], featv)]
 			diff_pos = (next_i-i, next_j-j)
 			curr_act = None
 			for act, val in actionSet.items():
@@ -294,7 +271,7 @@ def build_state_trajectories(obsFullDict, traj_robot, id_traj, actionSet, focus_
 
 			assert curr_act is not None
 			curr_obs_evol.append((curr_obs, curr_act))
-			curr_pos_evol.append((i-focus_zone[0],j-focus_zone[1], featv))
+			curr_pos_evol.append((i-focus_zone[0],j-focus_zone[1]))
 		obs_evol.append(curr_obs_evol)
 		pos_evol.append(curr_pos_evol)
 
@@ -332,32 +309,30 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 	text_model += 'endobservables\n\n'
 
 	# Dictionary to save the relation between the row, col, feat and an unique state identifier
-	dictState = {(i,j,featv) : k for k, (i,j,featv) in enumerate(m_obs_dict.keys())}
+	dictState = {(i,j) : k for k, (i,j) in enumerate(m_obs_dict.keys())}
 	nstate = len(dictState)
 	nobs = len(id_obs)
 
 	# Add a description of the observables
-	text_model += '// The observation to state translation\n'
-	for (i,j,featv), obs_id in m_obs_dict.items():
-		text_model += '// obs = {} ---> state = {} | row = {}, col = {}, feat = {}\n'.format(obs_id, dictState[(i,j,featv)], i, j, featv)
-
+	text_model += '// The observation meaning\n'
+	for (i,j), obs_id in m_obs_dict.items():
+		text_model += '// state = {} | row = {}, col = {} |  --->  | {}\n'.format(dictState[(i,j)], i, j, ' - '.join(['(obs={} w.p {})'.format(o,p) for o, p in obs_id.items()]))
 
 	# Define formula for the goal set
-	text_model += '\n\nformula done = {};\n'.format(' | '.join(['(state = {})'.format(dictState[(row, col, feat)]) for (row, col, feat) in goalset] ) )
+	text_model += '\n\nformula done = {};\n'.format(' | '.join(['(state = {})'.format(dictState[(row, col)]) for (row, col) in goalset] ) )
 	text_model += 'observable "amdone" = done;\n\n'
 
 	# For each feature, define the observations that characterize the feature
 	text_model += '// Specify the observation corresponding to the different features\n'
-	road_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'road'])
+	road_obs = set([ obs for obs, obsval in id_obs.items() if obsval[0] == 'road'])
 	if len(road_obs) > 0:
 		text_model += '\nformula road = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in road_obs]))
-	gravel_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'gravel'])
+	gravel_obs = set([ obs for obs, obsval in id_obs.items() if obsval[0] == 'gravel'])
 	if len(gravel_obs) > 0:
 		text_model += '\nformula gravel = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in gravel_obs]))
-	grass_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'grass'])
+	grass_obs = set([ obs for obs, obsval in id_obs.items() if obsval[0] == 'grass'])
 	if len(grass_obs) > 0:
 		text_model += '\nformula grass = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in grass_obs]))
-
 
 	# Create the main module
 	text_model += '\nmodule phoenix\n\n'
@@ -366,21 +341,23 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 	text_model += '\tobs : [-1..{}];\n\n'.format(nobs+1)
 
 	text_model += '\t// Initialization\n'
-	text_model += '\t[] state=-1 -> {};\n'.format(' \n\t\t\t\t\t+ '.join([ '1/{} : (state\'= {}) & (obs\'= {})'.format(len(initset), dictState[(i,j,featv)], m_obs_dict[(i,j,featv)]) for (i,j,featv) in initset ] ) )
+	text_model += '\t[] state=-1 -> {};\n'.format(' \n\t\t\t\t\t+ '.join([ '{}/{} : (state\'= {}) & (obs\'= {})'.format(p, len(initset), dictState[(i,j)], o) \
+																			for (i,j) in initset for o, p in m_obs_dict[(i,j)].items()] ) )
 
 	# Add movement of the agent
 	text_model += '\n\t// Moving around the Phoenix environment\n\n'
-	for (i,j, featv), trans_info in trans_dict.items():
-		if (i,j,featv) in goalset:
+	for (i,j), trans_info in trans_dict.items():
+		if (i,j) in goalset:
 			continue
 		for act, next_state_dist in trans_info.items():
-			text_model += '\t[{}] state={} -> {};\n'.format(act, dictState[(i,j,featv)], ' + '.join( ['{}: (state\'={}) & (obs\'={})'.format(prob, dictState[(next_i, next_j, next_featv)], m_obs_dict[(next_i, next_j, next_featv)]) for (next_i, next_j, next_featv), prob in next_state_dist.items()] ) )
+			text_model += '\t[{}] state={} -> {};\n'.format(act, dictState[(i,j)], ' + '.join( ['{}: (state\'={}) & (obs\'={})'.format(prob*p, dictState[(next_i, next_j)], o) \
+															for (next_i, next_j), prob in next_state_dist.items() for o, p in m_obs_dict[(next_i, next_j)].items()] ) )
 
 	# Add the endless loop at the end goal point
 	text_model += '\n\t // Ensure that end goal points reach a sink point\n'
-	for (i,j,featv) in goalset:
+	for (i,j) in goalset:
 		for act in actionSet:
-			text_model += '\t[{}] state={} -> (state\' = {}) & (obs\' = {});\n'.format(act, dictState[(i,j,featv)], nstate, nobs)
+			text_model += '\t[{}] state={} -> (state\' = {}) & (obs\' = {});\n'.format(act, dictState[(i,j)], nstate, nobs)
 	# for act in actionSet:
 	# 	text_model += '\t[{}] done -> (state\' = {}) & (obs\' = {});\n'.format(act, nstate, nobs)
 
@@ -439,7 +416,7 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 	pickFile = open("{}_data.pkl".format(outfile), 'wb')
 	msaves = {'robot_obs' : robot_obs, 'robot_pos' : robot_pos, 'obs_dict' : m_obs_dict, 'state_dict' : dictState,
 				'n_row' : n_row, 'n_col' : n_col, 'focus_zone' : focus_zone, 'obs_radius' : obs_radius, 'id_traj' : id_traj, 
-				'goalset' : goalset, 'initset' : initset, 'prism_file' : filename}
+				'goalset' : goalset, 'initset' : initset, 'prism_file' : filename, 'id_obs' : id_obs}
 	pickle.dump(msaves, pickFile)
 	pickFile.close()
 
@@ -481,15 +458,14 @@ final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=sou
 m_obs_dict = None
 m_action_set = None
 (trans_dict, state_set), (m_obs_dict, id_obs), (m_action_set, move) = build_pomdp(n_row_focus, n_col_focus, final_map, obs_radius=obs_radius)
-
 robot_obs_evol, robot_pos_evol = build_state_trajectories(m_obs_dict, m_robot_state_evol, id_traj, m_action_set, focus_zone)
 goal_set = [ m_traj[-1] for m_traj in robot_pos_evol] 
-init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_init[0] and j>=focus_init[1] and i< focus_init[2] and j < focus_init[3])]
-# init_set = []
+init_set = [ (i,j,*featv) for (i, j, *featv) in m_obs_dict.keys() if (i>=focus_init[0] and j>=focus_init[1] and i< focus_init[2] and j < focus_init[3])]
+# # init_set = []
 # print(robot_obs_evol)
 # print(robot_pos_evol)
 
-# # Build the POMDP file
+# # # Build the POMDP file
 build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), 
                     (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), 
-                    m_action_set, 'phoenix_scen1_r5zoneobs')
+                    m_action_set, 'phoenix_scen1_r5featobs')
