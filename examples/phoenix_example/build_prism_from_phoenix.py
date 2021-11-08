@@ -454,7 +454,7 @@ traj_dir = 'aaai_experiment_09-17.pickle'
 south_west_center = (70, 105) # Row first then column
 
 # Define the uncertain observation
-obs_radius = 5
+obs_radius = 4
 
 # Specify the trajectory of interest
 # id_traj = [0,1,2,3,4,5,6,7,8,9]
@@ -492,4 +492,4 @@ init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_ini
 # # Build the POMDP file
 build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), 
                     (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), 
-                    m_action_set, 'phoenix_scen1_r5zoneobs')
+                    m_action_set, 'phoenix_scen1_r5zoneobs_expdemo')

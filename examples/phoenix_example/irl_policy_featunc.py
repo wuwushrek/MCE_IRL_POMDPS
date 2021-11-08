@@ -86,11 +86,11 @@ print(pomdp_r_1.pomdp)
 # Set the parameter for the trust region
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'aug' : lambda x : min(1.5,(x-1)*1.25+1),
-                          'lim' : 1+1e-3}
+                          'lim' : 1+1e-2}
 
 # Options for the solver
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, maxiter_weight=100,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=True, verbose_solver=False)
+                                    graph_epsilon=1e-8, discount=0.98, verbose=True, verbose_solver=False)
 
 # True reward in the POMDP environment
 weight = {'goal' : 50, 'road' : 0.1, 'gravel' : 0.5, 'grass' : -0.1, 'time' : 0.4}
@@ -102,13 +102,13 @@ irlPb_1 = irl_solver.IRLSolver(pomdp_r_1, init_trust_region=1.01, max_trust_regi
 pol_val_mdp = irlPb_1.from_reward_to_optimal_policy_mdp_lp(weight, gamma=options_opt.discount, save_info=(-1,'phoenix_mdp_fwd', weight))
 pol_val_grb_1 = irlPb_1.from_reward_to_policy_via_scp(weight, save_info=(20, 'phoenix_mem1_fwd', weight))
 
-# Simulate the obtained policies on the MDP to get optimal trajectories 
+# Simulate the obtained policies on the MDP to get optimal trajectories
 obs_based = False
 stat_mdp_val = dict()
 _, rew_mdp = pomdp_r_1.simulate_policy(pol_val_mdp, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_mdp_val)
 stat_mdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_mdp_val['state_evol'], state_dict, pomdp_r_1)
 
-# Simulate the obtained policies on the POMDP to get optimal trajectories 
+# Simulate the obtained policies on the POMDP to get optimal trajectories
 obs_based = True
 stat_pomdp_val = dict()
 trajExpert_nosi, _ = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_val_grb_1), weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=True)
@@ -127,11 +127,11 @@ print(feat_expert)
 # Trust region contraction and expansion
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'aug' : lambda x : min(1.5,(x-1)*1.25+1),
-                          'lim' : 1+1e-3}
+                          'lim' : 1+1e-2}
 
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
-                                    maxiter_weight=110, rho_weight=1, verbose_solver=False,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
+                                    maxiter_weight=150, rho_weight=1, verbose_solver=False,
+                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
 # Decreasing step size in the gradient updates
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
 
@@ -152,8 +152,8 @@ pomdp_r_1_si = parser_pomdp.PrismModel(prism_file, ["P=? [F \"goal\"]"], counter
 print(pomdp_r_1_si)
 
 options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
-                                    maxiter_weight=110, rho_weight= 1, verbose_solver=False,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+                                    maxiter_weight=150, rho_weight= 1, verbose_solver=False,
+                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
 
 
 # Build the solver for different memory size

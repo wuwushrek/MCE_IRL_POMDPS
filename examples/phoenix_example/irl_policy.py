@@ -63,7 +63,8 @@ def convert_stormstate_to_phoenixstate(trajs_storm, state_dict, pomdp_instance):
 np.random.seed(201)
 
 # datafile = "phoenix_scen1_r4uncert_data.pkl"
-datafile = "phoenix_scen1_r5zoneobs_data.pkl"
+# datafile = "phoenix_scen1_r5zoneobs_data.pkl"
+datafile = "phoenix_scen1_r5zoneobs_expdemo_data.pkl"
 
 # Load the data file for robot trajectory
 mFile = open(datafile, 'rb')
@@ -86,11 +87,11 @@ print(pomdp_r_1.pomdp)
 # Set the parameter for the trust region
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'aug' : lambda x : min(1.5,(x-1)*1.25+1),
-                          'lim' : 1+1e-3}
+                          'lim' : 1+1e-2}
 
 # Options for the solver
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, maxiter_weight=100,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=True, verbose_solver=False)
+                                    graph_epsilon=1e-8, discount=0.98, verbose=True, verbose_solver=False)
 
 # True reward in the POMDP environment
 weight = {'goal' : 50, 'road' : 0.1, 'gravel' : 0.5, 'grass' : -0.1, 'time' : 0.4}
@@ -119,7 +120,7 @@ stat_pomdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_v
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1._pomdp._reward_feat_nomem, irlPb_1._options.discount)
-# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
+feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Print the attained featurres values
 print(feat_expert)
@@ -127,11 +128,11 @@ print(feat_expert)
 # Trust region contraction and expansion
 irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'aug' : lambda x : min(1.5,(x-1)*1.25+1),
-                          'lim' : 1+1e-3}
+                          'lim' : 1+1e-2}
 
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
-                                    maxiter_weight=110, rho_weight=1, verbose_solver=False,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+                                    maxiter_weight=160, rho_weight=1, verbose_solver=False,
+                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
 # Decreasing step size in the gradient updates
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
 
@@ -151,9 +152,9 @@ stat_pomdp_exp_nosi_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(sta
 pomdp_r_1_si = parser_pomdp.PrismModel(prism_file, ["P=? [F \"goal\"]"], counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=False)
 print(pomdp_r_1_si)
 
-options_opt = irl_solver.OptOptions(mu=1e4, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
-                                    maxiter_weight=110, rho_weight= 1, verbose_solver=False,
-                                    graph_epsilon=1e-6, discount=0.999, verbose=False, verbose_weight=True)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
+                                    maxiter_weight=160, rho_weight= 1, verbose_solver=False,
+                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
 
 
 # Build the solver for different memory size
@@ -162,7 +163,7 @@ irlPb_1_si = irl_solver.IRLSolver(pomdp_r_1_si, init_trust_region=1.01, sat_thre
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1_si, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1_si._pomdp._reward_feat_nomem, irlPb_1_si._options.discount)
-# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
+feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Learn from the MDP demonstrations on a single memory
 irlPb_1_si._options = options_opt
