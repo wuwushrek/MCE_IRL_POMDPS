@@ -111,6 +111,7 @@ stat_mdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_mdp_val['
 # Simulate the obtained policies on the POMDP to get optimal trajectories 
 obs_based = True
 stat_pomdp_val = dict()
+trajExpert_nosi, _ = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_val_grb_1), weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=True)
 _, rew_pomdp = pomdp_r_1.simulate_policy(pol_val_grb_1, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_val)
 stat_pomdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_val['state_evol'], state_dict, pomdp_r_1)
 
@@ -118,6 +119,7 @@ stat_pomdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_v
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1._pomdp._reward_feat_nomem, irlPb_1._options.discount)
+# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Print the attained featurres values
 print(feat_expert)
@@ -160,6 +162,7 @@ irlPb_1_si = irl_solver.IRLSolver(pomdp_r_1_si, init_trust_region=1.01, sat_thre
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1_si, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1_si._pomdp._reward_feat_nomem, irlPb_1_si._options.discount)
+# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Learn from the MDP demonstrations on a single memory
 irlPb_1_si._options = options_opt
