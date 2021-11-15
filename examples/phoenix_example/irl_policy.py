@@ -60,11 +60,10 @@ def convert_stormstate_to_phoenixstate(trajs_storm, state_dict, pomdp_instance):
 
 
 # For reproducibility
-np.random.seed(201)
+np.random.seed(101)
 
 # datafile = "phoenix_scen1_r4uncert_data.pkl"
-# datafile = "phoenix_scen1_r5zoneobs_data.pkl"
-datafile = "phoenix_scen1_r5zoneobs_expdemo_data.pkl"
+datafile = "phoenix_scen1_r5zoneobs_data.pkl"
 
 # Load the data file for robot trajectory
 mFile = open(datafile, 'rb')
@@ -78,7 +77,7 @@ obs_dict = mData['obs_dict']
 prism_file = mData['prism_file']
 
 # Load the pomdp model
-pomdp_r_1 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=True)
+pomdp_r_1 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=False)
 # pomdp_r_5 = parser_pomdp.PrismModel(prism_file, counter_type=stormpy.pomdp.PomdpMemoryPattern.fixed_counter, memory_len=4, export=False)
 
 print(pomdp_r_1.pomdp)
@@ -90,14 +89,14 @@ irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'lim' : 1+1e-2}
 
 # Options for the solver
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, maxiter_weight=100,
-                                    graph_epsilon=1e-8, discount=0.98, verbose=True, verbose_solver=False)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1, mu_rew=1.0, maxiter=100, maxiter_weight=150,
+                                    graph_epsilon=1e-6, discount=0.98, verbose=True, verbose_solver=False)
 
 # True reward in the POMDP environment
-weight = {'goal' : 50, 'road' : 0.1, 'gravel' : 0.5, 'grass' : -0.1, 'time' : 0.4}
+weight = {'goal' : 60, 'road' : 1.0, 'gravel' : 2, 'grass' : -0.1, 'time' : 0.2}
 
 # Build the solver for different memory size
-irlPb_1 = irl_solver.IRLSolver(pomdp_r_1, init_trust_region=1.01, max_trust_region=1.5, options=options_opt)
+irlPb_1 = irl_solver.IRLSolver(pomdp_r_1, init_trust_region=1.2, max_trust_region=1.5, options=options_opt)
 
 # Get the optimal policy for memory size 1 and save such policy and the associated performances
 pol_val_mdp = irlPb_1.from_reward_to_optimal_policy_mdp_lp(weight, gamma=options_opt.discount, save_info=(-1,'phoenix_mdp_fwd', weight))
@@ -106,21 +105,21 @@ pol_val_grb_1 = irlPb_1.from_reward_to_policy_via_scp(weight, save_info=(20, 'ph
 # Simulate the obtained policies on the MDP to get optimal trajectories 
 obs_based = False
 stat_mdp_val = dict()
-_, rew_mdp = pomdp_r_1.simulate_policy(pol_val_mdp, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_mdp_val)
+_, rew_mdp = pomdp_r_1.simulate_policy(pol_val_mdp, weight, 100, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_mdp_val)
 stat_mdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_mdp_val['state_evol'], state_dict, pomdp_r_1)
 
 # Simulate the obtained policies on the POMDP to get optimal trajectories 
 obs_based = True
 stat_pomdp_val = dict()
 trajExpert_nosi, _ = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_val_grb_1), weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=True)
-_, rew_pomdp = pomdp_r_1.simulate_policy(pol_val_grb_1, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_val)
+_, rew_pomdp = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_val_grb_1), weight, 100, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_val)
 stat_pomdp_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_val['state_evol'], state_dict, pomdp_r_1)
 
 
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1._pomdp._reward_feat_nomem, irlPb_1._options.discount)
-feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
+# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Print the attained featurres values
 print(feat_expert)
@@ -131,8 +130,8 @@ irl_solver.trustRegion = {'red' : lambda x : ((x - 1) / 1.5 + 1),
                           'lim' : 1+1e-2}
 
 options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
-                                    maxiter_weight=160, rho_weight=1, verbose_solver=False,
-                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
+                                    maxiter_weight=150, rho_weight=1, verbose_solver=False,
+                                    graph_epsilon=1e-6, discount=0.98, verbose=False, verbose_weight=True)
 # Decreasing step size in the gradient updates
 irl_solver.gradientStepSize = lambda iterVal, diffFeat : 1 / np.power(iterVal+1, 0.5)
 
@@ -144,7 +143,7 @@ _, pol_expert_nosi = irlPb_1.solve_irl_pomdp_given_traj(feat_expert, save_info=(
 # Simulate the obtained policies on the POMDP to get optimal trajectories 
 obs_based = True
 stat_pomdp_exp_nosi_val = dict()
-_, rew_pomdp_irl_nosi = pomdp_r_1.simulate_policy(pol_expert_nosi, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_exp_nosi_val)
+_, rew_pomdp_irl_nosi = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_expert_nosi), weight, 100, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_exp_nosi_val)
 stat_pomdp_exp_nosi_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_exp_nosi_val['state_evol'], state_dict, pomdp_r_1)
 
 
@@ -152,18 +151,18 @@ stat_pomdp_exp_nosi_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(sta
 pomdp_r_1_si = parser_pomdp.PrismModel(prism_file, ["P=? [F \"goal\"]"], counter_type=stormpy.pomdp.PomdpMemoryPattern.selective_counter, memory_len=1, export=False)
 print(pomdp_r_1_si)
 
-options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update= 2, 
-                                    maxiter_weight=160, rho_weight= 1, verbose_solver=False,
-                                    graph_epsilon=1e-8, discount=0.98, verbose=False, verbose_weight=True)
+options_opt = irl_solver.OptOptions(mu=1e3, mu_spec=1e1, mu_rew=1, maxiter=100, max_update=2, 
+                                    maxiter_weight=150, rho_weight= 1, verbose_solver=False,
+                                    graph_epsilon=1e-6, discount=0.98, verbose=False, verbose_weight=True)
 
 
 # Build the solver for different memory size
-irlPb_1_si = irl_solver.IRLSolver(pomdp_r_1_si, init_trust_region=1.01, sat_thresh=0.98, max_trust_region=1.5, options=options_opt)
+irlPb_1_si = irl_solver.IRLSolver(pomdp_r_1_si, init_trust_region=1.2, sat_thresh=0.98, max_trust_region=1.5, options=options_opt)
 
 # COmpute the feature of the expert trajectories
 expert_trajectory = obs_action_from_traj(pomdp_r_1_si, robot_obs_traj, state_dict)
 feat_expert = irl_solver.compute_feature_from_trajectory_and_rewfeat(expert_trajectory, irlPb_1_si._pomdp._reward_feat_nomem, irlPb_1_si._options.discount)
-feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
+# feat_expert = irlPb_1.compute_feature_from_trajectory(trajExpert_nosi)
 
 # Learn from the MDP demonstrations on a single memory
 irlPb_1_si._options = options_opt
@@ -172,7 +171,7 @@ _, pol_expert_si = irlPb_1_si.solve_irl_pomdp_given_traj(feat_expert, save_info=
 # # Simulate the obtained policies on the POMDP to get optimal trajectories 
 obs_based = True
 stat_pomdp_exp_si_val = dict()
-_, rew_pomdp_irl_si = pomdp_r_1.simulate_policy(pol_expert_si, weight, 10, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_exp_si_val)
+_, rew_pomdp_irl_si = pomdp_r_1.simulate_policy(parser_pomdp.correct_policy(pol_expert_si), weight, 100, 100, obs_based=obs_based, stop_at_accepting_state=False, stat=stat_pomdp_exp_si_val)
 stat_pomdp_exp_si_val['phoenix_traj'] = convert_stormstate_to_phoenixstate(stat_pomdp_exp_si_val['state_evol'], state_dict, pomdp_r_1_si)
 
 

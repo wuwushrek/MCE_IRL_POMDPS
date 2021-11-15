@@ -82,7 +82,7 @@ def load_map_file(traj_dir):
 	# return (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col)
 
 
-def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bias=10):
+def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bias=None):
 	""" Take a set of map from the Phoenix environment and construct a dictionary such that
 		for each grid cell (i,j), the value of the dictionary is a probability over the possible
 		features that might be present at the cell (i,j)
@@ -328,12 +328,12 @@ eps_bias = None
 n_row_focus = 35
 n_col_focus = 60
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
-focus_init = (0, 0, 4, 4)
-# focus_init_row = 2
-# focus_init_col = 0
-# focus_init_nrow = 4
-# focus_init_ncol = 4
-# focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
+# focus_init = (0, 0, 4, 4)
+focus_init_row = 15
+focus_init_col = 12
+focus_init_nrow = 4
+focus_init_ncol = 4
+focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
 
 # Build the feature distribution on the focused map
 final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=south_west_center, id_traj=id_traj, eps_bias=eps_bias)

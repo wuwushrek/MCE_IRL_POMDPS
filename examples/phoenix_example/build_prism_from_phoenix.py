@@ -34,10 +34,15 @@ def load_map_file(traj_dir):
 		print('Features : {}'.format(elem['features']))
 		print('Features type    : {}'.format(elem['feature_type']))
 		print('Traj length  : {} | start = {}, end = {}'.format(len(elem['trajectory']), elem['trajectory'][0],elem['trajectory'][-1] ))
-		assert elem['feature_map_numpy'].shape[:-1] == (elem['map_height'], elem['map_width']), 'Feature map does not match map dimension'
+		# assert elem['feature_map_numpy'].shape[:-1] == (elem['map_height'], elem['map_width']), 'Feature map does not match map dimension'
 		print('------------------------------------------------')
-		assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
-		n_row, n_col = elem['feature_map_numpy'].shape[:-1]
+		if n_row is None or n_col is None:
+			n_row, n_col = elem['map_height'], elem['map_width']
+		else:
+			n_row = elem['map_height'] if n_row > elem['map_height'] else n_row
+			n_col = elem['map_width'] if n_col > elem['map_width'] else n_col
+		# assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
+		# n_row, n_col = elem['feature_map_numpy'].shape[:-1]
 		assert n_feat is None or n_feat == len(elem['features']), 'Number of features should match accross demonstrations'
 		n_feat = len(elem['features'])
 
@@ -56,28 +61,8 @@ def load_map_file(traj_dir):
 			
 	return (n_row, n_col, n_feat), traj_data, m_robot_state_evol
 
-	# # Parse the agent trajectories and save them
-	# m_robot = np.zeros((len(traj_data), n_row, n_col))
-	# m_robot_row = list() # Save the agent row positions
-	# m_robot_col = list() # Save the agent col positions
 
-	# for i, elem in enumerate(traj_data):
-	# 	row_val, col_val = list(), list()
-
-	# 	# x,y are given such that x is the index on the column axis and y the index on the row axis
-	# 	for (x,y) in elem['trajectory']:
-	# 		m_robot[i, y, x] = 1
-	# 		row_val.append(y)
-	# 		col_val.append(x)
-
-	# 	# Append the robot row and column to the resuls
-	# 	m_robot_row.append(row_val)
-	# 	m_robot_col.append(col_val)
-
-	# return (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col)
-
-
-def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bias=10):
+def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bias=None):
 	""" Take a set of map from the Phoenix environment and construct a dictionary such that
 		for each grid cell (i,j), the value of the dictionary is a probability over the possible
 		features that might be present at the cell (i,j)
@@ -125,12 +110,12 @@ def build_map(m_data, n_row, n_col, south_west_center=(0,0), id_traj=[0], eps_bi
 				# Count the number of time this feature has been seen in this cell
 				final_map[(i,j)][feat_name] = final_map[(i,j)].get(feat_name, 0) + 1
 
-				# # If the feature is not unknown then remove unknown from the possible feature
-				# if feat_name != UNKNOWN_FEATURE:
-				# 	final_map[(i,j)].pop(UNKNOWN_FEATURE, None)
-				# # If the feature is unknown but the cell contains a known value then remove unknown
-				# if feat_name == UNKNOWN_FEATURE and len(final_map[(i,j)]) > 1:
-				# 	final_map[(i,j)].pop(UNKNOWN_FEATURE, None)
+				# If the feature is not unknown then remove unknown from the possible feature
+				if feat_name != UNKNOWN_FEATURE:
+					final_map[(i,j)].pop(UNKNOWN_FEATURE, None)
+				# If the feature is unknown but the cell contains a known value then remove unknown
+				if feat_name == UNKNOWN_FEATURE and len(final_map[(i,j)]) > 1:
+					final_map[(i,j)].pop(UNKNOWN_FEATURE, None)
 
 		# Print the unique feature in this map
 		print('[Map {}] Unique elements : {}'.format(elem['demonstration_id'], mUniqueValue))
@@ -445,51 +430,47 @@ def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
 
 
 
-traj_dir = 'aaai_experiment_09-17.pickle'
+traj_dir = 'aaai_experiment_final.pickle'
 # (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col) = load_map_file(traj_dir)
 (n_row, n_col, n_feat), traj_data, m_robot_state_evol = load_map_file(traj_dir)
 
 # Origin point of the sub-grid
 # south_west_center = (0, 0) # Row first then column
-south_west_center = (70, 105) # Row first then column
+south_west_center = (25, 25) # Row first then column
 
 # Define the uncertain observation
-obs_radius = 4
+obs_radius = 6
 
 # Specify the trajectory of interest
-# id_traj = [0,1,2,3,4,5,6,7,8,9]
-id_traj = [0]
+id_traj = [0,1,2,3,4,5,6,7,8,9]
 eps_bias = None
 
 # Number of row and column
-# n_row_focus = n_row
-# n_col_focus = n_col
 n_row_focus = 35
-n_col_focus = 70
+n_col_focus = 60
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
-# focus_init = (0, 0, n_row, n_col)
-focus_init_row = 2
-focus_init_col = 0
+# focus_init = (0, 0, 4, 4)
+focus_init_row = 15
+focus_init_col = 12
 focus_init_nrow = 4
 focus_init_ncol = 4
 focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
 
 # Build the feature distribution on the focused map
 final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=south_west_center, id_traj=id_traj, eps_bias=eps_bias)
-# print(final_map[(20,27)])
+
 # Compute the transition matrix and the set of states and observation from the model
 m_obs_dict = None
 m_action_set = None
 (trans_dict, state_set), (m_obs_dict, id_obs), (m_action_set, move) = build_pomdp(n_row_focus, n_col_focus, final_map, obs_radius=obs_radius)
 
+
 robot_obs_evol, robot_pos_evol = build_state_trajectories(m_obs_dict, m_robot_state_evol, id_traj, m_action_set, focus_zone)
 goal_set = [ m_traj[-1] for m_traj in robot_pos_evol] 
 init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_init[0] and j>=focus_init[1] and i< focus_init[2] and j < focus_init[3])]
-# init_set = []
-# print(robot_obs_evol)
-# print(robot_pos_evol)
+
 
 # # Build the POMDP file
 build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), 
                     (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), 
-                    m_action_set, 'phoenix_scen1_r5zoneobs_expdemo')
+                    m_action_set, 'phoenix_scen1_r5zoneobs')
