@@ -9,18 +9,21 @@ from tqdm.auto import tqdm
 UNKNOWN_FEATURE = 'unknown'
 
 
-# # Load the pickle file containing the simulation information
-# mFile = open('phoenix_scen1_r4uncert_40x80_100x100_traj_res.pkl', 'rb')
-# mData = pickle.load(mFile)
-# mFile.close()
+# Load the pickle file containing the simulation information
+mFile = open('phoenix_scen1_r5featobs_traj_res.pkl', 'rb')
+mData = pickle.load(mFile)
+mFile.close()
 
-# num_traj = 1
-# mdp_traj = mData['stat_mdp_val']['phoenix_traj'][:num_traj]
-# rew_mdp = mData['rew_mdp']
-# pomdp_traj = mData['stat_pomdp_val']['phoenix_traj'][:num_traj]
-# rew_pomdp = mData['rew_pomdp']
-# expert_nosi_traj = mData['stat_pomdp_exp_nosi_val']['phoenix_traj'][:num_traj]
-# rew_exp_nosi = mData['rew_pomdp_irl_nosi']
+num_traj = 1
+mdp_traj = mData['stat_mdp_val']['phoenix_traj'][:num_traj]
+rew_mdp = mData['rew_mdp']
+pomdp_traj = mData['stat_pomdp_val']['phoenix_traj'][:num_traj]
+rew_pomdp = mData['rew_pomdp']
+expert_si_traj = mData['stat_pomdp_exp_nosi_val']['phoenix_traj'][:num_traj]
+rew_exp_si = mData['rew_pomdp_irl_nosi']
+expert_nosi_traj = mData['stat_pomdp_exp_si_val']['phoenix_traj'][:num_traj]
+rew_exp_nosi = mData['rew_pomdp_irl_si']
+
 # expert_si_traj = mData['stat_pomdp_exp_si_val']['phoenix_traj'][:num_traj]
 # rew_exp_si = mData['rew_pomdp_irl_si']
 
@@ -54,7 +57,7 @@ def load_map_file(traj_dir):
 		print('Traj length  : {} | start = {}, end = {}'.format(len(elem['trajectory']), elem['trajectory'][0],elem['trajectory'][-1] ))
 		assert elem['feature_map_numpy'].shape[:-1] == (elem['map_height'], elem['map_width']), 'Feature map does not match map dimension'
 		print('------------------------------------------------')
-		assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
+		# assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
 		if i == 0:
 			n_row, n_col = elem['feature_map_numpy'].shape[:-1]
 		assert n_feat is None or n_feat == len(elem['features']), 'Number of features should match accross demonstrations'
@@ -302,7 +305,6 @@ def build_state_trajectories(obsFullDict, traj_robot, id_traj, actionSet, focus_
 	return obs_evol, pos_evol
 
 traj_dir = 'aaai_experiment_09-17.pickle'
-# traj_dir = 'aaai_experiment_latest.pickle'
 # (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col) = load_map_file(traj_dir)
 (n_row, n_col, n_feat), traj_data, m_robot_state_evol = load_map_file(traj_dir)
 
@@ -311,7 +313,7 @@ traj_dir = 'aaai_experiment_09-17.pickle'
 south_west_center = (70, 105) # Row first then column
 
 # Define the uncertain observation
-obs_radius = 5
+obs_radius = 3
 
 # Specify the trajectory of interest
 # id_traj = [0,1,2,3,4,5,6,7,8,9]
@@ -452,9 +454,9 @@ colorTrajectories = 'blue'
 initColor = 'cyan'
 endColor = 'yellow'
 mdpColor = 'black'
-pomdpColor = 'violet'
-nosiColor = 'purple'
-siColor = 'yellow'
+pomdpColor = 'magenta'
+nosiColor = 'slateblue'
+siColor = 'salmon'
 
 # Rebuild the local image for showing the zone of interest
 m_local_map = np.zeros((n_row_focus, n_col_focus, 3))
@@ -478,102 +480,70 @@ plt.grid(True)
 # plt.gca().set_xticklabels([ int(val+south_west_center[1]) for val in plt.gca().get_xticks()])
 # plt.gca().set_yticklabels([ int(val+south_west_center[0]) for val in plt.gca().get_yticks()])
 
-
-# animation function.  This is called sequentially
-def animate(itval):
-	# a = info_color.get_array()
-	# traj_spacing = 1
-	# ax_img.clear()
-	x_point = list()
-	y_point = list()
-	m_patch = list()
-	for ind_traj_robot in robot_pos_evol:
-		x = np.array([ j for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
-		y = np.array([ i for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
-		fIt = ax_img.scatter(x[-1], y[-1], color='red')
-		_arr = arrowplot(ax_img, x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=colorTrajectories, markerStyle='o')
-		for o, p in m_obs_dict[(y[-1], x[-1])].items():
-			for (iv, jv) in obs_to_state[o]:
-				x_point.append(jv)
-				y_point.append(iv)
-	axva = ax_img.scatter(x_point, y_point, color='limegreen')
-	return [info_color, axva, fInit, fGoal, fIt, *_arr]
-
-import matplotlib.animation as animation
-anim = animation.FuncAnimation(
-                               fig, 
-                               animate,
-                               blit=True, 
-                               frames = 50,
-                               interval = 100, # in ms
-                               )
-
 # anim.save('test_anim.mp4', extra_args=['-vcodec', 'libx264'])
 
-# # Plot the agent trajectories used to do the IRL problem
-# for ind_traj_robot in robot_pos_evol:
-# 	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
-# 	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
-# 	arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, 
-# 				color=colorTrajectories, markerStyle='o')
-# 	# plt.plot(x[0:-1:20], y[0:-1:20])
+# Plot the agent trajectories used to do the IRL problem
+for ind_traj_robot in robot_pos_evol:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, 
+				color=colorTrajectories, markerStyle='o')
+	# plt.plot(x[0:-1:20], y[0:-1:20])
 
-# # Plot the initial and end zone
-# plt.scatter([ j for (i,j,*featv) in init_set], [ i for (i,j,*featv) in init_set], color=initColor)
-# plt.scatter([ j for (i,j,*featv) in goal_set], [ i for (i,j,*featv) in goal_set], color=endColor)
-
-
-# for ind_traj_robot in mdp_traj:
-# 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
-# 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-# 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
-# # plt.plot([], y_delim, color='red', linewidth=2)
-
-# for ind_traj_robot in pomdp_traj:
-# 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
-# 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-# 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
+# Plot the initial and end zone
+plt.scatter([ j for (i,j,*featv) in init_set], [ i for (i,j,*featv) in init_set], color=initColor)
+plt.scatter([ j for (i,j,*featv) in goal_set], [ i for (i,j,*featv) in goal_set], color=endColor)
 
 
-# for ind_traj_robot in expert_nosi_traj:
-# 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
-# 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-# 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=nosiColor, markerStyle='o')
+for ind_traj_robot in mdp_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
+# plt.plot([], y_delim, color='red', linewidth=2)
 
-# for ind_traj_robot in expert_si_traj:
-# 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
-# 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-# 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+for ind_traj_robot in pomdp_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
 
+for ind_traj_robot in expert_nosi_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=nosiColor, markerStyle='o')
 
-# discountArray = np.array([1 for i in range(len(rew_pomdp[0]))])
-# def plot_pol(rewData, cData=-1, color='red', label='dum', alpha=0.5, plot_std=False, linestyle='solid'):
-# 	rewData = np.array(rewData) * discountArray
-# 	arr_rewData = np.cumsum(rewData, axis=1)
-# 	mean_rew = np.mean(arr_rewData, axis = 0)
-# 	min_rew = np.min(arr_rewData, axis=0)
-# 	max_rew = np.max(arr_rewData, axis=0)
-# 	std_rew = np.std(arr_rewData, axis=0)
-# 	axis_x = np.array([i for i in range(mean_rew.shape[0])])
-# 	# print(mean_rew.shape, cData)
-# 	plt.plot(axis_x[:cData], mean_rew[:cData], color=color, label=label, linestyle=linestyle)
-# 	if plot_std:
-# 		plt.fill_between(axis_x[:cData], np.maximum(min_rew,mean_rew-std_rew)[:cData], np.minimum(max_rew,mean_rew+std_rew)[:cData], color=color, alpha=alpha)
+for ind_traj_robot in expert_si_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
 
 
-# plt.figure()
-# nData = 200
-# plot_pol(rew_mdp, nData, color='blue', label='Optimal policy on the MDP', alpha=1, plot_std=False)
-# plot_pol(rew_pomdp, nData, color='green', label='Optimal policy on the POMDP', alpha=0.8, plot_std=False)
-# # plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
-# plot_pol(rew_exp_nosi, nData, color='orange', label='Learned policy with no side information', alpha = 0.6, plot_std=False)
-# plot_pol(rew_exp_si, nData, color='yellow', label='Learned policy with side information', alpha=0.6, plot_std=False)
-# plt.ylabel('Mean Accumulated reward')
-# plt.xlabel('Time steps')
-# plt.grid(True)
-# plt.legend(ncol=1, bbox_to_anchor=(0,1), loc='lower left', columnspacing=1.0)
-# plt.tight_layout()
-# plt.show()
+discountArray = np.array([1 for i in range(len(rew_pomdp[0]))])
+def plot_pol(rewData, cData=-1, color='red', label='dum', alpha=0.5, plot_std=False, linestyle='solid'):
+	rewData = np.array(rewData) * discountArray
+	arr_rewData = np.cumsum(rewData, axis=1)
+	mean_rew = np.mean(arr_rewData, axis = 0)
+	min_rew = np.min(arr_rewData, axis=0)
+	max_rew = np.max(arr_rewData, axis=0)
+	std_rew = np.std(arr_rewData, axis=0)
+	axis_x = np.array([i for i in range(mean_rew.shape[0])])
+	# print(mean_rew.shape, cData)
+	plt.plot(axis_x[:cData], mean_rew[:cData], color=color, label=label, linestyle=linestyle)
+	if plot_std:
+		plt.fill_between(axis_x[:cData], np.maximum(min_rew,mean_rew-std_rew)[:cData], np.minimum(max_rew,mean_rew+std_rew)[:cData], color=color, alpha=alpha)
+
+
+plt.figure()
+nData = 200
+plot_pol(rew_mdp, nData, color=mdpColor, label='Optimal policy on the MDP', alpha=1, plot_std=False)
+plot_pol(rew_pomdp, nData, color=pomdpColor, label='Optimal policy on the POMDP', alpha=0.8, plot_std=False)
+# plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
+plot_pol(rew_exp_nosi, nData, color=nosiColor, label='Learned policy with no side information', alpha = 0.6, plot_std=False)
+plot_pol(rew_exp_si, nData, color=siColor, label='Learned policy with side information', alpha=0.6, plot_std=False)
+plt.ylabel('Mean Accumulated reward')
+plt.xlabel('Time steps')
+plt.grid(True)
+plt.legend(ncol=1, bbox_to_anchor=(0,1), loc='lower left', columnspacing=1.0)
+plt.tight_layout()
 
 # print(plt.gca().get_xticks())
 # print(plt.gca().get_xticklabels())
@@ -582,5 +552,74 @@ anim = animation.FuncAnimation(
 # plt.xlabel()
 # plt.colorbar(info_color)
 # print(info_color)
+
+# Create the figure and draw the image inside the figure
+fig = plt.figure(figsize=(12,12))
+ax_img = fig.gca()
+# Plot the resulting map and define correctly the axes
+info_color = plt.imshow(m_local_map, interpolation='none')
+fInit = plt.scatter([ j for (i,j,*featv) in init_set], [ i for (i,j,*featv) in init_set], color=initColor)
+fGoal = plt.scatter([ j for (i,j,*featv) in goal_set], [ i for (i,j,*featv) in goal_set], color=endColor)
+plt.grid(True)
+
+# Plot the agent trajectories used to do the IRL problem
+for ind_traj_robot in robot_pos_evol:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	initplot = arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, 
+				color=colorTrajectories, markerStyle='o')
+
+for ind_traj_robot in mdp_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	mdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
+# plt.plot([], y_delim, color='red', linewidth=2)
+
+for ind_traj_robot in pomdp_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	pomdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
+
+for ind_traj_robot in expert_nosi_traj:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	nosiplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=nosiColor, markerStyle='o')
+
+# for ind_traj_robot in expert_si_traj:
+# 	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+# 	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+# 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+
+
+# animation function.  This is called sequentially
+def animate(itval):
+	# a = info_color.get_array()
+	traj_spacing = 1
+	# ax_img.clear()
+	x_point = list()
+	y_point = list()
+	m_patch = list()
+	for ind_traj_robot in expert_si_traj:
+		x = np.array([ j for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		y = np.array([ i for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		fIt = ax_img.scatter(x[-1], y[-1], color='red')
+		_arr = arrowplot(ax_img, x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+		for o, p in m_obs_dict[(y[-1], x[-1])].items():
+			for (iv, jv) in obs_to_state[o]:
+				x_point.append(jv)
+				y_point.append(iv)
+	axva = ax_img.scatter(x_point, y_point, color='limegreen')
+	return [info_color, axva, fInit, fGoal, fIt, *initplot, *_arr, *nosiplot, *pomdpplot, *mdpplot]
+
+import matplotlib.animation as animation
+anim = animation.FuncAnimation(
+                               fig, 
+                               animate,
+                               blit=True, 
+                               frames = 100,
+                               interval = 100, # in ms
+                               )
+
+
 plt.show()
 ################################################################################################

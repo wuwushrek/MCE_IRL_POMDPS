@@ -10,7 +10,7 @@ UNKNOWN_FEATURE = 'unknown'
 
 
 # Load the pickle file containing the simulation information
-mFile = open('phoenix_scen1_r4uncert_40x80_100x100_traj_res.pkl', 'rb')
+mFile = open('phoenix_scen1_r5zoneobs_traj_res.pkl', 'rb')
 mData = pickle.load(mFile)
 mFile.close()
 
@@ -23,6 +23,21 @@ expert_nosi_traj = mData['stat_pomdp_exp_nosi_val']['phoenix_traj'][:num_traj]
 rew_exp_nosi = mData['rew_pomdp_irl_nosi']
 expert_si_traj = mData['stat_pomdp_exp_si_val']['phoenix_traj'][:num_traj]
 rew_exp_si = mData['rew_pomdp_irl_si']
+
+# Load the pickle file containing the simulation information
+mFile = open('phoenix_scen1_r5zoneobs_expdemo_traj_res.pkl', 'rb')
+mData_1 = pickle.load(mFile)
+mFile.close()
+
+num_traj = 1
+mdp_traj_1 = mData_1['stat_mdp_val']['phoenix_traj'][:num_traj]
+rew_mdp_1 = mData_1['rew_mdp']
+pomdp_traj_1 = mData_1['stat_pomdp_val']['phoenix_traj'][:num_traj]
+rew_pomdp_1 = mData_1['rew_pomdp']
+expert_nosi_traj_1 = mData_1['stat_pomdp_exp_nosi_val']['phoenix_traj'][:num_traj]
+rew_exp_nosi_1 = mData_1['rew_pomdp_irl_nosi']
+expert_si_traj_1 = mData_1['stat_pomdp_exp_si_val']['phoenix_traj'][:num_traj]
+rew_exp_si_1 = mData_1['rew_pomdp_irl_si']
 
 
 
@@ -319,173 +334,33 @@ def build_state_trajectories(obsFullDict, traj_robot, id_traj, actionSet, focus_
 	return obs_evol, pos_evol
 
 
-def build_prism_model(pomdp_repr, extra_args, actionSet, outfile = 'phoenix'):
-	""" This function create the prism model corresponding to the mission defined in Phoenix environment
-	"""
-	filename = "{}.prism".format(outfile)
-	resFile = open(filename, 'w')
-
-	# Parse the extra arguments of the function
-	n_row, n_col, focus_zone, obs_radius, id_traj, goalset, initset, robot_obs, robot_pos = extra_args
-
-	# Parse the POMDP representation of the map
-	final_map, trans_dict, state_set, m_obs_dict, id_obs = pomdp_repr
-
-	# Create headers for the file
-	text_model = '\n// A POMDP representation of a local map in Phoenix environment\n'
-	text_model += '// The local map is of size ({} , {}) and start at (low_row, low_col, high_row, high_col) = ({} , {}, {}, {})\n'.format(n_row, n_col, focus_zone[0], focus_zone[1], focus_zone[2], focus_zone[3])
-	text_model += '// Observation radius : {} | Trajectories considered : {}\n'.format(obs_radius, id_traj)
-	text_model += '// The Goal set of interest : {}\n'.format(goalset)
-	text_model += '// The init set of interest : {}\n\n'.format(initset)
-
-	# Create the observable of this environment
-	text_model += 'pomdp\n\n\n'
-
-	text_model += '// Can observe its position with an uncertaincy radius r = {}\n'.format(obs_radius)
-	text_model += 'observables\n'
-	text_model += '\tobs\n'
-	text_model += 'endobservables\n\n'
-
-	# Dictionary to save the relation between the row, col, feat and an unique state identifier
-	dictState = {(i,j,featv) : k for k, (i,j,featv) in enumerate(m_obs_dict.keys())}
-	nstate = len(dictState)
-	nobs = len(id_obs)
-
-	# Add a description of the observables
-	text_model += '// The observation to state translation\n'
-	for (i,j,featv), obs_id in m_obs_dict.items():
-		text_model += '// obs = {} ---> state = {} | row = {}, col = {}, feat = {}\n'.format(obs_id, dictState[(i,j,featv)], i, j, featv)
-
-
-	# Define formula for the goal set
-	text_model += '\n\nformula done = {};\n'.format(' | '.join(['(state = {})'.format(dictState[(row, col, feat)]) for (row, col, feat) in goalset] ) )
-	text_model += 'observable "amdone" = done;\n\n'
-
-	# For each feature, define the observations that characterize the feature
-	text_model += '// Specify the observation corresponding to the different features\n'
-	road_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'road'])
-	if len(road_obs) > 0:
-		text_model += '\nformula road = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in road_obs]))
-	gravel_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'gravel'])
-	if len(gravel_obs) > 0:
-		text_model += '\nformula gravel = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in gravel_obs]))
-	grass_obs = set([ obs for (i,j,featv), obs in m_obs_dict.items() if featv == 'grass'])
-	if len(grass_obs) > 0:
-		text_model += '\nformula grass = {};\n'.format('|'.join([ '(obs = {})'.format(obs) for obs in grass_obs]))
-
-
-	# Create the main module
-	text_model += '\nmodule phoenix\n\n'
-
-	text_model += '\tstate : [-1..{}];\n'.format(nstate+1)
-	text_model += '\tobs : [-1..{}];\n\n'.format(nobs+1)
-
-	text_model += '\t// Initialization\n'
-	text_model += '\t[] state=-1 -> {};\n'.format(' \n\t\t\t\t\t+ '.join([ '1/{} : (state\'= {}) & (obs\'= {})'.format(len(initset), dictState[(i,j,featv)], m_obs_dict[(i,j,featv)]) for (i,j,featv) in initset ] ) )
-
-	# Add movement of the agent
-	text_model += '\n\t// Moving around the Phoenix environment\n\n'
-	for (i,j, featv), trans_info in trans_dict.items():
-		if (i,j,featv) in goalset:
-			continue
-		for act, next_state_dist in trans_info.items():
-			text_model += '\t[{}] state={} -> {};\n'.format(act, dictState[(i,j,featv)], ' + '.join( ['{}: (state\'={}) & (obs\'={})'.format(prob, dictState[(next_i, next_j, next_featv)], m_obs_dict[(next_i, next_j, next_featv)]) for (next_i, next_j, next_featv), prob in next_state_dist.items()] ) )
-
-	# Add the endless loop at the end goal point
-	text_model += '\n\t // Ensure that end goal points reach a sink point\n'
-	for (i,j,featv) in goalset:
-		for act in actionSet:
-			text_model += '\t[{}] state={} -> (state\' = {}) & (obs\' = {});\n'.format(act, dictState[(i,j,featv)], nstate, nobs)
-	# for act in actionSet:
-	# 	text_model += '\t[{}] done -> (state\' = {}) & (obs\' = {});\n'.format(act, nstate, nobs)
-
-	text_model += '\n\t// Sink point --> Loop here\n'
-	for act in actionSet:
-		text_model += '\t[{}]  (state = {}) -> (state\' = {}) & (obs\' = {});\n'.format(act, nstate, nstate, nobs)
-
-	text_model += '\nendmodule\n\n\n'
-
-	# Define the reward module for the goal set
-	text_model += '// Rewards for reaching one of the goal set\n'
-	text_model += 'rewards "goal"\n'
-	for act in actionSet:
-		text_model += '\t[{}]  done : 1;\n'.format(act)
-	text_model += 'endrewards\n\n'
-
-	# Define the reward module for the road feature
-	text_model += '// Rewards for being on the road\n'
-	text_model += 'rewards "road"\n'
-	for act in actionSet:
-		text_model += '\t[{}]  !done & road : 1;\n'.format(act)
-	text_model += 'endrewards\n\n'
-
-	# Define the reward module for the grass feature
-	text_model += '// Rewards for being on the grass\n'
-	text_model += 'rewards "grass"\n'
-	for act in actionSet:
-		text_model += '\t[{}]  !done & grass : 1;\n'.format(act)
-	text_model += 'endrewards\n\n'
-
-	# Define the reward module for the gravel feature
-	text_model += '// Rewards for being on the gravel\n'
-	text_model += 'rewards "gravel"\n'
-	for act in actionSet:
-		text_model += '\t[{}]  !done & gravel : -1;\n'.format(act)
-	text_model += 'endrewards\n\n'
-
-	# Define the reward module for elapsed time
-	text_model += '// Rewards for time elapsed\n'
-	text_model += 'rewards "time"\n'
-	for act in actionSet:
-		text_model += '\t[{}]  !done & !(obs = {}) : -1;\n'.format(act, nobs)
-	text_model += 'endrewards\n\n'
-
-	# Define some label
-	text_model += 'label "goal"  = obs={};\n'.format(nobs)
-	text_model += 'label "road"  = road;\n'
-	text_model += 'label "grass"  = grass;\n'
-	text_model += 'label "gravel"  = gravel;\n'
-
-	# Write the text in the output file
-	resFile.write(text_model)
-	resFile.close()
-
-	# Now save the data need for the IRL problem
-	pickFile = open("{}_data.pkl".format(outfile), 'wb')
-	msaves = {'robot_obs' : robot_obs, 'robot_pos' : robot_pos, 'obs_dict' : m_obs_dict, 'state_dict' : dictState,
-				'n_row' : n_row, 'n_col' : n_col, 'focus_zone' : focus_zone, 'obs_radius' : obs_radius, 'id_traj' : id_traj, 
-				'goalset' : goalset, 'initset' : initset, 'prism_file' : filename}
-	pickle.dump(msaves, pickFile)
-	pickFile.close()
-
-
-
 traj_dir = 'aaai_experiment_09-17.pickle'
 # (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col) = load_map_file(traj_dir)
 (n_row, n_col, n_feat), traj_data, m_robot_state_evol = load_map_file(traj_dir)
 
 # Origin point of the sub-grid
 # south_west_center = (0, 0) # Row first then column
-south_west_center = (80, 100) # Row first then column
+south_west_center = (70, 105) # Row first then column
 
 # Define the uncertain observation
 obs_radius = 4
 
 # Specify the trajectory of interest
-id_traj = [0,1,2,3,4,5,6,7,8,9]
+# id_traj = [0,1,2,3,4,5,6,7,8,9]
+id_traj = [0]
 eps_bias = None
 
 # Number of row and column
 # n_row_focus = n_row
 # n_col_focus = n_col
-n_row_focus = 40
-n_col_focus = 80
+n_row_focus = 35
+n_col_focus = 70
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
 # focus_init = (0, 0, n_row, n_col)
-focus_init_row = 100-south_west_center[0]
-focus_init_col = 100-south_west_center[1]
-focus_init_nrow = 5
-focus_init_ncol = 5
+focus_init_row = 2
+focus_init_col = 0
+focus_init_nrow = 4
+focus_init_ncol = 4
 focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
 
 # Build the feature distribution on the focused map
@@ -495,6 +370,14 @@ final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=sou
 m_obs_dict = None
 m_action_set = None
 (trans_dict, state_set), (m_obs_dict, id_obs), (m_action_set, move) = build_pomdp(n_row_focus, n_col_focus, final_map, obs_radius=obs_radius)
+obs_states = dict()
+for (i,j, featv), obs in m_obs_dict.items():
+	obs_states[(i,j, featv)] = set()
+	for (i1,j1, featv1), obs1 in m_obs_dict.items():
+		if (i1,j1, featv1) == (i,j, featv) or (i1,j1, featv1) in obs_states[(i,j, featv)]:
+			continue
+		if obs1 == obs:
+			obs_states[(i,j, featv)].add((i1,j1, featv1))
 
 robot_obs_evol, robot_pos_evol = build_state_trajectories(m_obs_dict, m_robot_state_evol, id_traj, m_action_set, focus_zone)
 goal_set = [ m_traj[-1] for m_traj in robot_pos_evol] 
@@ -502,12 +385,6 @@ init_set = [ (i,j,featv) for (i, j, featv) in m_obs_dict.keys() if (i>=focus_ini
 # init_set = []
 # print(robot_obs_evol)
 # print(robot_pos_evol)
-
-# # # Build the POMDP file
-# build_prism_model((final_map, trans_dict, state_set, m_obs_dict, id_obs), 
-#                     (n_row_focus, n_col_focus, focus_zone, obs_radius, id_traj, goal_set, init_set, robot_obs_evol, robot_pos_evol), 
-#                     m_action_set, 'phoenix_scen1_r4uncert')
-
 
 
 ####################################################################################################
@@ -563,6 +440,7 @@ def arrowplot(axes, x, y, nArrs=30, mutateSize=10, color='gray', markerStyle='o'
 
 	# based on nArrs, set the nominal arrow spacing
 	arrSpaceD = rtotD / nArrs
+	m_pacthes = []
 
 	# Loop over the path segments
 	iSeg = 0
@@ -588,7 +466,7 @@ def arrowplot(axes, x, y, nArrs=30, mutateSize=10, color='gray', markerStyle='o'
 				arrowstyle='simple',
 				mutation_scale=mutateSize,
 				color=color, alpha=0.5)
-			axes.add_patch(p)
+			m_pacthes.append(axes.add_patch(p))
 			# Increment to the next arrow
 			xBeg = xEnd
 			xEnd += xArr
@@ -596,6 +474,7 @@ def arrowplot(axes, x, y, nArrs=30, mutateSize=10, color='gray', markerStyle='o'
 			yEnd += segSlope * xArr
 		# Increment segment number
 		iSeg += 1
+	return m_pacthes
 
 
 # Plot the obtained focused final map
@@ -608,9 +487,9 @@ colorTrajectories = 'blue'
 initColor = 'cyan'
 endColor = 'yellow'
 mdpColor = 'black'
-pomdpColor = 'violet'
-nosiColor = 'purple'
-siColor = 'yellow'
+pomdpColor = 'magenta'
+nosiColor = 'slateblue'
+siColor = 'salmon'
 
 # Rebuild the local image for showing the zone of interest
 m_local_map = np.zeros((n_row_focus, n_col_focus, 3))
@@ -646,13 +525,13 @@ plt.scatter([ j for (i,j,featv) in goal_set], [ i for (i,j,featv) in goal_set], 
 for ind_traj_robot in mdp_traj:
 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
+	mdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
 # plt.plot([], y_delim, color='red', linewidth=2)
 
 for ind_traj_robot in pomdp_traj:
 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
-	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
+	pomdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
 
 
 for ind_traj_robot in expert_nosi_traj:
@@ -664,6 +543,17 @@ for ind_traj_robot in expert_si_traj:
 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
 	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+
+for ind_traj_robot in expert_si_traj_1:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color='dark'+siColor,)
+
+
+for ind_traj_robot in expert_nosi_traj_1:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color='dark'+nosiColor,)
 
 
 discountArray = np.array([1 for i in range(len(rew_pomdp[0]))])
@@ -682,18 +572,20 @@ def plot_pol(rewData, cData=-1, color='red', label='dum', alpha=0.5, plot_std=Fa
 
 
 plt.figure()
-nData = 200
-plot_pol(rew_mdp, nData, color='blue', label='Optimal policy on the MDP', alpha=1, plot_std=False)
-plot_pol(rew_pomdp, nData, color='green', label='Optimal policy on the POMDP', alpha=0.8, plot_std=False)
+nData = -1
+plot_pol(rew_mdp, nData, color=mdpColor, label='Optimal policy on the MDP', alpha=1, plot_std=False)
+plot_pol(rew_pomdp, nData, color=pomdpColor, label='Optimal policy on the POMDP', alpha=0.8, plot_std=False)
 # plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
-plot_pol(rew_exp_nosi, nData, color='orange', label='Learned policy with no side information', alpha = 0.6, plot_std=False)
-plot_pol(rew_exp_si, nData, color='yellow', label='Learned policy with side information', alpha=0.6, plot_std=False)
+plot_pol(rew_exp_nosi, nData, color=nosiColor, label='Learned policy with no side information', alpha = 0.6, plot_std=False)
+plot_pol(rew_exp_si, nData, color=siColor, label='Learned policy with side information', alpha=0.6, plot_std=False)
+plot_pol(rew_exp_nosi_1, nData, color=nosiColor, linestyle='dashed', label='Learned policy with no side information, opt. traj.', alpha = 0.6, plot_std=False)
+plot_pol(rew_exp_si_1, nData, color=siColor, linestyle='dashed', label='Learned policy with side information, opt. traj.', alpha=0.6, plot_std=False)
 plt.ylabel('Mean Accumulated reward')
 plt.xlabel('Time steps')
 plt.grid(True)
 plt.legend(ncol=1, bbox_to_anchor=(0,1), loc='lower left', columnspacing=1.0)
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # print(plt.gca().get_xticks())
 # print(plt.gca().get_xticklabels())
@@ -702,5 +594,85 @@ plt.show()
 # plt.xlabel()
 # plt.colorbar(info_color)
 # print(info_color)
+
+
+# Create the figure and draw the image inside the figure
+fig = plt.figure(figsize=(12,12))
+ax_img = fig.gca()
+# Plot the resulting map and define correctly the axes
+info_color = plt.imshow(m_local_map, interpolation='none')
+fInit = plt.scatter([ j for (i,j,*featv) in init_set], [ i for (i,j,*featv) in init_set], color=initColor)
+fGoal = plt.scatter([ j for (i,j,*featv) in goal_set], [ i for (i,j,*featv) in goal_set], color=endColor)
+plt.grid(True)
+
+for ind_traj_robot in mdp_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	mdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
+# plt.plot([], y_delim, color='red', linewidth=2)
+
+for ind_traj_robot in pomdp_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	pomdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
+
+for ind_traj_robot in robot_pos_evol:
+	x = np.array([ j for (i, j, *fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, *fv) in ind_traj_robot])
+	initplot = arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, 
+				color=colorTrajectories, markerStyle='o')
+# animation function.  This is called sequentially
+def animate(itval):
+	# a = info_color.get_array()
+	traj_spacing = 1
+	# ax_img.clear()
+	x_point = list()
+	y_point = list()
+	m_patch = list()
+	for ind_traj_robot in expert_nosi_traj:
+		x = np.array([ j for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		y = np.array([ i for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		fv = [ fv for k, (i, j, fv) in enumerate(ind_traj_robot) if k <= itval]
+		fIt = ax_img.scatter(x[-1], y[-1], color=nosiColor, marker='>')
+		# print(x[0::traj_spacing+1], y[0::traj_spacing+1])
+		_arr = arrowplot(ax_img, x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=nosiColor, markerStyle='o')
+		setSates = obs_states[(y[-1], x[-1], fv[-1])]
+		for (iv,jv,featv) in setSates:
+			x_point.append(jv)
+			y_point.append(iv)
+	# print(x_point, y_point)
+	if _arr is None:
+		_arr = list()
+
+	x_point_1 = list()
+	y_point_1 = list()
+	for ind_traj_robot in expert_si_traj:
+		x = np.array([ j for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		y = np.array([ i for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+		fv = [ fv for k, (i, j, fv) in enumerate(ind_traj_robot) if k <= itval]
+		fIt_1 = ax_img.scatter(x[-1], y[-1], color=siColor, marker='>')
+		# print(x[0::traj_spacing+1], y[0::traj_spacing+1])
+		_arr_1 = arrowplot(ax_img, x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+		setSates = obs_states[(y[-1], x[-1], fv[-1])]
+		for (iv,jv,featv) in setSates:
+			x_point_1.append(jv)
+			y_point_1.append(iv)
+	# print(x_point, y_point)
+	if _arr_1 is None:
+		_arr_1 = list()
+
+	axva = ax_img.scatter(x_point, y_point, color='limegreen')
+	axva_1 = ax_img.scatter(x_point_1, y_point_1, color='limegreen')
+	return [axva, axva_1, info_color, *mdpplot, *pomdpplot, *initplot, fInit, fGoal, fIt, fIt_1, *_arr, *_arr_1]
+
+import matplotlib.animation as animation
+anim = animation.FuncAnimation(
+                               fig, 
+                               animate,
+                               blit=True, 
+                               frames = 100,
+                               interval = 100, # in ms
+                               )
+
 plt.show()
 ################################################################################################
