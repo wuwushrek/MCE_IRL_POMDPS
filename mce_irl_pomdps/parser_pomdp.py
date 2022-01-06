@@ -49,8 +49,12 @@ def pomdp_labels_and_reward_feature(pomdp):
 				curr_rew = r_val.get_state_action_reward(c_index)
 				assert ((obs_id, action.id) not in reward_features[r_id]) or \
 						reward_features[r_id][(obs_id, action.id)] == curr_rew, \
-							"Observation reward not unique"
+							"Observation reward not unique ({}, {}), ({}, {}), {}".format(obs_id, action.id, reward_features[r_id][(obs_id, action.id)], curr_rew,
+								state_action_string[state.id])
 				reward_features[r_id][(obs_id, action.id)] = curr_rew
+				# if (obs_id == 20 and action.id == 0):
+				# 	print("({}, {}), ({}, {}), {}".format(obs_id, action.id, reward_features[r_id][(obs_id, action.id)], curr_rew,
+				# 				state_action_string[state.id]))
 	return state_action_string, reward_features
 
 

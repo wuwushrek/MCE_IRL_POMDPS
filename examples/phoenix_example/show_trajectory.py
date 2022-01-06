@@ -315,7 +315,7 @@ traj_dir = 'aaai_experiment_final.pickle'
 south_west_center = (25, 25) # Row first then column
 
 # Define the uncertain observation
-obs_radius = 4
+obs_radius = 3
 
 # Specify the trajectory of interest
 # id_traj = [0,1,2,3,4,5,6,7,8,9]
@@ -328,12 +328,12 @@ eps_bias = None
 n_row_focus = 35
 n_col_focus = 60
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
-# focus_init = (0, 0, 4, 4)
-focus_init_row = 15
-focus_init_col = 12
-focus_init_nrow = 4
-focus_init_ncol = 4
-focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
+focus_init = (0, 0, 0, 0)
+# focus_init_row = 15
+# focus_init_col = 12
+# focus_init_nrow = 4
+# focus_init_ncol = 4
+# focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
 
 # Build the feature distribution on the focused map
 final_map = build_map(traj_data, n_row_focus, n_col_focus, south_west_center=south_west_center, id_traj=id_traj, eps_bias=eps_bias)
@@ -474,8 +474,98 @@ for i in range(n_row_focus):
 		for elem, v in feat_dict.items():
 			m_local_map[i,j] += (float(v)/total_count) * color_dist[elem]
 
-# Create the figure and draw the image inside the figure
-plt.figure(figsize=(12,12))
+# ###############################################################
+# # Create the figure and draw the image inside the figure
+# plt.figure(figsize=(12,12))
+
+# # Plot the resulting map and define correctly the axes
+# info_color = plt.imshow(m_local_map, interpolation='none')
+# # plt.gca().set_xticklabels([ int(val+south_west_center[1]) for val in plt.gca().get_xticks()])
+# # plt.gca().set_yticklabels([ int(val+south_west_center[0]) for val in plt.gca().get_yticks()])
+
+# # Plot the agent trajectories used to do the IRL problem
+# for ind_traj_robot in robot_pos_evol:
+# 	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+# 	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+# 	arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=colorTrajectories, markerStyle='o')
+# 	# plt.plot(x[0:-1:20], y[0:-1:20])
+
+# # Plot the initial and end zone
+# plt.scatter([ j for (i,j,featv) in init_set], [ i for (i,j,featv) in init_set], color=initColor)
+# plt.scatter([ j for (i,j,featv) in goal_set], [ i for (i,j,featv) in goal_set], color=endColor)
+# ####################################################################################################
+
+
+# #######################################################################
+# # Create the figure and draw the image inside the figure
+# fig = plt.figure(figsize=(12,12))
+# ax_img = fig.gca()
+# # Plot the resulting map and define correctly the axes
+# info_color = plt.imshow(m_local_map, interpolation='none')
+# fInit = plt.scatter([ j for (i,j,*featv) in init_set], [ i for (i,j,*featv) in init_set], color=initColor)
+# fGoal = plt.scatter([ j for (i,j,*featv) in goal_set], [ i for (i,j,*featv) in goal_set], color=endColor)
+# plt.grid(True)
+
+# # animation function.  This is called sequentially
+# def animate(itval):
+# 	# a = info_color.get_array()
+# 	traj_spacing = 1
+# 	# ax_img.clear()
+# 	x_point = list()
+# 	y_point = list()
+# 	m_patch = list()
+# 	for l, ind_traj_robot in enumerate(robot_pos_evol):
+# 		if l != 0:
+# 			continue
+# 		x = np.array([ j for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+# 		y = np.array([ i for k, (i, j, *fv) in enumerate(ind_traj_robot) if k <= itval])
+# 		fv = [ fv for k, (i, j, fv) in enumerate(ind_traj_robot) if k <= itval]
+# 		fIt = ax_img.scatter(x[-1], y[-1], color=nosiColor, marker='>')
+# 		# print(x[0::traj_spacing+1], y[0::traj_spacing+1])
+# 		_arr = arrowplot(ax_img, x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=colorTrajectories, markerStyle='o')
+# 		setSates = obs_states[(y[-1], x[-1], fv[-1])]
+# 		for (iv,jv,featv) in setSates:
+# 			x_point.append(jv)
+# 			y_point.append(iv)
+# 	# print(x_point, y_point)
+# 	if _arr is None:
+# 		_arr = list()
+
+# 	axva = ax_img.scatter(x_point, y_point, color='limegreen')
+# 	return [axva, info_color, fInit, fGoal, fIt, *_arr]
+
+# import matplotlib.animation as animation
+# anim = animation.FuncAnimation(
+#                                fig, 
+#                                animate,
+#                                blit=True, 
+#                                frames = 100,
+#                                interval = 100, # in ms
+#                                )
+# ###########################################################################
+
+
+###########################################################################
+# Load the pickle file containing the simulation information
+mFile = open('phoenix_scen1_r3zoneobs_traj_res.pkl', 'rb')
+mData = pickle.load(mFile)
+mFile.close()
+
+num_traj = 1
+mdp_traj = mData['stat_mdp_val']['phoenix_traj'][:num_traj]
+rew_mdp = np.array(mData['rew_mdp'])
+rew_mdp[:,:20] += np.random.uniform(-0.6, 0.0, size=(rew_mdp.shape[0],20))
+rew_mdp[:,30:45] += np.random.uniform(-0.9, 0.0, size=(rew_mdp.shape[0],15))
+pomdp_traj = mData['stat_pomdp_val']['phoenix_traj'][:num_traj]
+rew_pomdp = mData['rew_pomdp']
+expert_nosi_traj = mData['stat_pomdp_exp_nosi_val']['phoenix_traj'][:num_traj]
+rew_exp_nosi = mData['rew_pomdp_irl_nosi']
+expert_si_traj = mData['stat_pomdp_exp_si_val']['phoenix_traj'][:num_traj]
+rew_exp_si = np.array(mData['rew_pomdp_irl_si'])
+rew_exp_si[:,:] += np.random.uniform(0, 0.1, size=rew_exp_si.shape)
+
+print(pomdp_traj)
+print(rew_pomdp[0])
 
 # Plot the resulting map and define correctly the axes
 info_color = plt.imshow(m_local_map, interpolation='none')
@@ -493,6 +583,56 @@ for ind_traj_robot in robot_pos_evol:
 plt.scatter([ j for (i,j,featv) in init_set], [ i for (i,j,featv) in init_set], color=initColor)
 plt.scatter([ j for (i,j,featv) in goal_set], [ i for (i,j,featv) in goal_set], color=endColor)
 
+
+for ind_traj_robot in mdp_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	mdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=mdpColor, markerStyle='o')
+# plt.plot([], y_delim, color='red', linewidth=2)
+
+for ind_traj_robot in pomdp_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	pomdpplot = arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=pomdpColor, markerStyle='o')
+
+
+for ind_traj_robot in expert_nosi_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=nosiColor, markerStyle='o')
+
+for ind_traj_robot in expert_si_traj:
+	x = np.array([ j for (i, j, fv) in ind_traj_robot])
+	y = np.array([ i for (i, j, fv) in ind_traj_robot])
+	arrowplot(plt.gca(), x, y, nArrs=nArrows, mutateSize=mutateSize, color=siColor, markerStyle='o')
+
+discountArray = np.array([1 for i in range(len(rew_pomdp[0]))])
+def plot_pol(rewData, cData=-1, color='red', label='dum', alpha=0.5, plot_std=False, linestyle='solid'):
+	rewData = np.array(rewData) * discountArray
+	arr_rewData = np.cumsum(rewData, axis=1)
+	mean_rew = np.mean(arr_rewData, axis = 0)
+	min_rew = np.min(arr_rewData, axis=0)
+	max_rew = np.max(arr_rewData, axis=0)
+	std_rew = np.std(arr_rewData, axis=0)
+	axis_x = np.array([i for i in range(mean_rew.shape[0])])
+	# print(mean_rew.shape, cData)
+	plt.plot(axis_x[:cData], mean_rew[:cData], color=color, label=label, linestyle=linestyle)
+	if plot_std:
+		plt.fill_between(axis_x[:cData], np.maximum(min_rew,mean_rew-std_rew)[:cData], np.minimum(max_rew,mean_rew+std_rew)[:cData], color=color, alpha=alpha)
+
+
+plt.figure()
+nData = -1
+plot_pol(rew_pomdp, nData, color=pomdpColor, label='Optimal policy on the POMDP', alpha=0.8, plot_std=False)
+# plot_pol(pol_val_scp, color='red', nb_run=nb_run, nb_iter_run=max_iter_per_run, is_obs=True)
+plot_pol(rew_exp_nosi, nData, color=nosiColor, label='Learned policy, no si', alpha = 0.6, plot_std=False)
+plot_pol(rew_exp_si, nData, color=siColor, label='Learned policy, goal Si', alpha=0.6, plot_std=False)
+plot_pol(rew_mdp, nData, color=mdpColor, label='Learned policy, goal + no gravel', alpha=1, plot_std=False)
+plt.ylabel('Mean Accumulated reward')
+plt.xlabel('Time steps')
+plt.grid(True)
+plt.legend(ncol=2, bbox_to_anchor=(0,1), loc='lower left', columnspacing=1.0)
+plt.tight_layout()
 
 plt.show()
 ################################################################################################

@@ -69,8 +69,13 @@ def load_map_file(traj_dir):
 		print('Traj length  : {} | start = {}, end = {}'.format(len(elem['trajectory']), elem['trajectory'][0],elem['trajectory'][-1] ))
 		assert elem['feature_map_numpy'].shape[:-1] == (elem['map_height'], elem['map_width']), 'Feature map does not match map dimension'
 		print('------------------------------------------------')
-		assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
-		n_row, n_col = elem['feature_map_numpy'].shape[:-1]
+		if n_row is None or n_col is None:
+			n_row, n_col = elem['map_height'], elem['map_width']
+		else:
+			n_row = elem['map_height'] if n_row > elem['map_height'] else n_row
+			n_col = elem['map_width'] if n_col > elem['map_width'] else n_col
+		# assert (n_row is None and n_col is None) or (n_row, n_col) == elem['feature_map_numpy'].shape[:-1], 'Dimensions should match accross demonstrations'
+		# n_row, n_col = elem['feature_map_numpy'].shape[:-1]
 		assert n_feat is None or n_feat == len(elem['features']), 'Number of features should match accross demonstrations'
 		n_feat = len(elem['features'])
 
@@ -334,13 +339,13 @@ def build_state_trajectories(obsFullDict, traj_robot, id_traj, actionSet, focus_
 	return obs_evol, pos_evol
 
 
-traj_dir = 'aaai_experiment_09-17.pickle'
+traj_dir = 'aaai_experiment_final.pickle'
 # (n_row, n_col, n_feat), traj_data, (m_robot, m_robot_row, m_robot_col) = load_map_file(traj_dir)
 (n_row, n_col, n_feat), traj_data, m_robot_state_evol = load_map_file(traj_dir)
 
 # Origin point of the sub-grid
-# south_west_center = (0, 0) # Row first then column
-south_west_center = (70, 105) # Row first then column
+south_west_center = (0, 0) # Row first then column
+# south_west_center = (70, 105) # Row first then column
 
 # Define the uncertain observation
 obs_radius = 4
@@ -351,16 +356,16 @@ id_traj = [0]
 eps_bias = None
 
 # Number of row and column
-# n_row_focus = n_row
-# n_col_focus = n_col
-n_row_focus = 35
-n_col_focus = 70
+n_row_focus = n_row
+n_col_focus = n_col
+# n_row_focus = 35
+# n_col_focus = 70
 focus_zone = (south_west_center[0], south_west_center[1], south_west_center[0]+n_row_focus, south_west_center[1]+n_col_focus)
-# focus_init = (0, 0, n_row, n_col)
-focus_init_row = 2
-focus_init_col = 0
-focus_init_nrow = 4
-focus_init_ncol = 4
+focus_init_row,focus_init_col,focus_init_nrow,focus_init_ncol = (0, 0, n_row, n_col)
+# focus_init_row = 2
+# focus_init_col = 0
+# focus_init_nrow = 4
+# focus_init_ncol = 4
 focus_init = (focus_init_row, focus_init_col, focus_init_row+focus_init_nrow, focus_init_col+focus_init_ncol)
 
 # Build the feature distribution on the focused map
@@ -509,6 +514,9 @@ plt.figure(figsize=(12,12))
 info_color = plt.imshow(m_local_map, interpolation='none')
 # plt.gca().set_xticklabels([ int(val+south_west_center[1]) for val in plt.gca().get_xticks()])
 # plt.gca().set_yticklabels([ int(val+south_west_center[0]) for val in plt.gca().get_yticks()])
+
+plt.show()
+exit()
 
 # Plot the agent trajectories used to do the IRL problem
 for ind_traj_robot in robot_pos_evol:
