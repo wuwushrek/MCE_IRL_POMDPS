@@ -1,3 +1,35 @@
+# NOTES 05-18-2022
+# MDP
+MDP = {
+    state1 : {
+        action_1: {
+            state2 : (q1, {}),
+            state3 : (q2, {}),
+        },
+        action_2: {
+            state2 : (q1, {}),
+            state3 : (q2, {}),
+        }
+   }
+}
+
+# POMDP
+POMDP = {
+    state1 : {
+        state2 : (q1, {
+           obs1 : p1,
+           obs2 : p2
+        }),
+        state3 : (q2, {
+            obs1 : p1,
+            obs2 : p2
+        })
+    }
+}
+
+
+################
+
 # Observation model (constructed from GT map)
 # O(o | s_prime)
 observations = {

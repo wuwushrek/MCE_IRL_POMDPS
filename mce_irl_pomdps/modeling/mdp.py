@@ -29,18 +29,6 @@ class MDP_GridWorld():
 
         # 3. Construct the transition function
         self.transition_function = self._construct_transition_function(self.state_space, self.action_space, agent_dynamics, slip_probability)
-        
-        for state, actions in self.transition_function.items():
-            for action, prob_dist in actions.items():
-                if sum(prob_dist.values()) != 1.0:
-                    print("ERROR!")
-                    print(state, action)
-                    print(prob_dist)
-                    print(sum(prob_dist.values()))
-                    print()
-
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(self.transition_function)
 
 
     def _construct_state_space(self, n_rows, n_cols):
@@ -154,8 +142,7 @@ class MDP_GridWorld():
 
         return transition_prob_dist
 
-# TODO
-# Construct POMDP based on observation data struct seen in "nest.py" line 3
+
 class POMDP_Gridworld():
 
     def __init__(self, n_rows, n_cols, agent_dynamics, slip_probability=0, gamma=0.9, perception_accuracy=0.75, featureList = ["Grass", "Gravel", "Road"]):
@@ -176,18 +163,7 @@ class POMDP_Gridworld():
 
         # 4. Construct the transition function
         self.transition_function = self._construct_transition_function(self.state_space, self.action_space, agent_dynamics, slip_probability)
-        
-        for state, actions in self.transition_function.items():
-            for action, prob_dist in actions.items():
-                if sum(prob_dist.values()) != 1.0:
-                    print("ERROR!")
-                    print(state, action)
-                    print(prob_dist)
-                    print(sum(prob_dist.values()))
-                    print()
 
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(self.transition_function)
 
     def _construct_observation_space(self, state_space, perception_accuracy, featureList):
         '''Format of feature List:
@@ -226,6 +202,7 @@ class POMDP_Gridworld():
 
         return action_space
 
+
     def _construct_transition_function(self, state_space, action_space, agent_dynamics, slip_probability):
         # 0. Setup
         transition_function = {}
@@ -321,10 +298,25 @@ class POMDP_Gridworld():
 
         return transition_prob_dist
 
+
 # Main
 if __name__ == "__main__":
-    MDP_GridWorld(3, 3, "elementary", 0.2)
-    POMDP_Gridworld(3,3, "elementary", 0.2, 0.99, 0.75, ["Grass", "Gravel", "Road"])
+    # MDP
+    my_MDP = MDP_GridWorld(3, 3, "elementary", 0.2)
+    for state, actions in my_MDP.transition_function.items():
+        for action, prob_dist in actions.items():
+            if sum(prob_dist.values()) != 1.0:
+                print("ERROR!")
+                print(state, action)
+                print(prob_dist)
+                print(sum(prob_dist.values()))
+                print()
 
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(my_MDP.transition_function)
+
+    # POMDP
+    my_POMDP = POMDP_Gridworld(3, 3, "elementary", 0.2, 0.99, 0.75, ["Grass", "Gravel", "Road"])
+    pp.pprint(my_POMDP.observation_space)
 
 # EOF
