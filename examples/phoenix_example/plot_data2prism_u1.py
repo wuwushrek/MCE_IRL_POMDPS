@@ -93,7 +93,7 @@ traj_dir = 'data_for_franck'
 
 # Origin point of the sub-grid
 south_west_center = (25, 60) # Row first then column
-# south_west_center = (25, 25) # Row first then column
+# south_west_center = (0, 0) # Row first then column
 
 # Define the uncertain observation
 obs_radius = 5
@@ -143,8 +143,12 @@ for i in range(n_row_focus):
 # Create the figure and draw the image inside the figure
 plt.figure(figsize=(12,12))
 
+for feat_name in (featlist+[UNKNOWN_FEATURE]):
+	print(feat_name)
+	plt.plot(0,0,"-", color=color_dist[feat_name], linewidth=5, label=feat_name)
 # Plot the resulting map and define correctly the axes
 info_color = plt.imshow(m_local_map, interpolation='none')
+
 
 # Plot the agent trajectories used to do the IRL problem
 for ind_traj_robot in robot_pos_evol:
@@ -153,8 +157,12 @@ for ind_traj_robot in robot_pos_evol:
 	arrowplot(plt.gca(), x[0::traj_spacing+1], y[0::traj_spacing+1], nArrs=nArrows, mutateSize=mutateSize, color=colorTrajectories, markerStyle='o')
 	# plt.plot(x[0:-1:20], y[0:-1:20])
 
-# Plot the initial and end zone
-plt.scatter([ j for (i,j,featv) in init_set], [ i for (i,j,featv) in init_set], color=initColor)
-plt.scatter([ j for (i,j,featv) in goal_set], [ i for (i,j,featv) in goal_set], color=endColor)
+plt.legend(loc= 'center', bbox_to_anchor=(0.5, 1.1), ncol=4, fancybox=True)
+# # Plot the initial and end zone
+# plt.scatter([ j for (i,j,featv) in init_set], [ i for (i,j,featv) in init_set], color=initColor)
+# plt.scatter([ j for (i,j,featv) in goal_set], [ i for (i,j,featv) in goal_set], color=endColor)
+import tikzplotlib
+# tikzplotlib.clean_figure()
+tikzplotlib.save('partmap.tex')
 
 plt.show()

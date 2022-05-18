@@ -281,9 +281,9 @@ def build_state_trajectories(dictfeat, traj_robot, actionSet, focus_zone):
 			if (i,j) == (next_i, next_j):
 				continue
 			afeatv = dictfeat[(i-focus_zone[0], j-focus_zone[1])]
-			# if obsFullDict is None:
-			# 	curr_pos_evol.append( (i-focus_zone[0],j-focus_zone[1], afeatv) )
-			# 	continue
+			if actionSet is None:
+				curr_pos_evol.append( (i-focus_zone[0],j-focus_zone[1], afeatv) )
+				continue
 			curr_obs = (i-focus_zone[0], j-focus_zone[1], afeatv) # obsFullDict[(i-focus_zone[0], j-focus_zone[1], afeatv)]
 			diff_pos = (next_i-i, next_j-j)
 			curr_act = None
