@@ -7,6 +7,7 @@ import numpy as np
 import stormpy
 
 import pickle
+import tikzplotlib
 
 def obs_action_from_traj(pomdp_instance, m_trajs, state_dict):
 	""" Find the list of observation action in term of the pomdp instance created by prism
