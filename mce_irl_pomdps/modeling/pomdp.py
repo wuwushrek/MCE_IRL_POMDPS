@@ -11,12 +11,18 @@ from paramiko import PasswordRequiredException
 
 class POMDP_Gridworld():
 
-    def __init__(self, n_rows, n_cols, agent_dynamics, slip_probability=0, gamma=0.9, perception_accuracy=0.75, featureList = ["Grass", "Gravel", "Road"]):
+    def __init__(self, obs_map, n_rows, n_cols, agent_dynamics, slip_probability=0, gamma=0.9, perception_accuracy=0.75, featureList = ["Grass", "Gravel", "Road"]):
         # 0. Setup
         self.slip_probability = slip_probability
         self.gamma = gamma
         self.perception_accuracy = perception_accuracy
         self.featureList = featureList
+        self.obs_map = obs_map
+
+        # self.road = 0
+        # self.gravel = 0
+        # self.grass = 0
+        # self.empty = 0
 
         # 1. Construct the state space
         self.state_space = self._construct_state_space(n_rows, n_cols)
@@ -112,9 +118,9 @@ class POMDP_Gridworld():
             "E": (0, +1)
         }
         featureList= {
-            "o_1": "Grass",
-            "o_2": "Gravel",
-            "o_3": "Road"
+            "Grass": 1,
+            "Gravel": 2,
+            "Road": 3
         } 
         obs_prob = {} 
 
@@ -144,7 +150,20 @@ class POMDP_Gridworld():
                     s_prime_prob = slip_probability/(len(actions)-1)
 
                 for key, value in featureList.items():
-                    obs_prob[key] = 1/len(featureList)              
+                    if self.obs_map[row_idx][col_idx][0] > 0:
+                        if self.obs_map[row_idx][col_idx][0] == value:
+                            # if value == 1:
+                            #     self.grass += 1
+                            # elif value == 2:
+                            #     self.gravel += 1
+                            # elif value == 3:
+                            #     self.road += 1
+                            obs_prob[key] = self.perception_accuracy
+                        else:
+                            obs_prob[key] = (1-self.perception_accuracy)/(len(featureList)-1)
+                    elif self.obs_map[row_idx][col_idx][0] == 0:
+                        # self.empty += 1
+                        obs_prob[key] = 1/len(featureList)
 
                 transition_prob_dist[(row_idx, col_idx)] = (s_prime_prob, obs_prob)
 
