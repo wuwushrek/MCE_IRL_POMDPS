@@ -78,7 +78,7 @@ class POMDP_Gridworld():
                 for key, value in actions.items():
                     prob_dists[key] = self.construct_transition_prob_dist_pomdp(self.state_space, (i,j), key, slip_probability)
                 
-                transition_function[(i, j)] = prob_dists
+                transition_function[str((i, j))] = prob_dists
 
         return transition_function
 
@@ -165,7 +165,7 @@ class POMDP_Gridworld():
                         # self.empty += 1
                         obs_prob[key] = 1/len(featureList)
 
-                transition_prob_dist[(row_idx, col_idx)] = (s_prime_prob, obs_prob)
+                transition_prob_dist[str((row_idx, col_idx))] = (s_prime_prob, obs_prob)
 
 
             except (AssertionError, IndexError) as e:
@@ -182,7 +182,7 @@ class POMDP_Gridworld():
                 else:
                     s_prime_prob_wall_bump += slip_probability/(len(actions)-1)
             
-                transition_prob_dist[(row_idx, col_idx)] = s_prime_prob_wall_bump
+                transition_prob_dist[str((row_idx, col_idx))] = s_prime_prob_wall_bump
 
         return transition_prob_dist
 
