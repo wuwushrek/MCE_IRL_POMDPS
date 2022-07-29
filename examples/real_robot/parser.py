@@ -21,7 +21,8 @@ def setup_observation_map(robot_map):
     no_road = 0
     empty = 0
     # 'features': ['grass', 'gravel', 'road']
-    
+    map_shape = np.shape(robot_map['data'][0]['feature_map_numpy'])
+
     # Step 1 -  Construct the observation map
     for i in range(map_shape[0]):
         for j in range(map_shape[1]):        
@@ -68,7 +69,6 @@ if __name__ == "__main__":
         raw_map = pickle.load(f)
     ## make a copy
     robot_map = copy.deepcopy(raw_map)
-    map_shape = np.shape(robot_map['data'][0]['feature_map_numpy'])
 
     # Step 1 - Create POMDPs
     number_of_demos = 10
