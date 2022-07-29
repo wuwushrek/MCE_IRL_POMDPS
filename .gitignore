@@ -138,10 +138,8 @@ dmypy.json
 cython_debug/
 
 #Jason file
-*.json
 *.tex
 *.svg
-*.pickle
 export_*.prism
 *.pkl
 *.eps
